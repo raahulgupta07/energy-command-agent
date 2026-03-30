@@ -10,6 +10,7 @@ import pandas as pd
 from config.settings import OPERATING_MODES, DECISION_RIGHTS
 from utils.data_loader import load_stores, load_daily_energy, load_store_sales, load_diesel_inventory, load_solar_generation
 from models.store_decision_engine import StoreDecisionEngine
+from utils.rule_insights import render_insight_cards, generate_store_decision_insights
 from utils.element_captions import get_page_captions, render_caption
 from utils.page_intelligence import render_page_intelligence
 from utils.smart_table import render_smart_table
@@ -89,6 +90,13 @@ with cols2[3]:
     neg_gen = summary.get("stores_negative_generator_ebitda", 0)
     ui.metric_card(title="Loss on Generator", content=str(neg_gen),
                    description="stores losing money", key="d_loss_gen")
+
+st.markdown("")
+
+# ── Key Insights (rule-based, always visible) ──
+st.markdown("### Key Insights")
+_decision_insights = generate_store_decision_insights(summary, plan)
+render_insight_cards(_decision_insights)
 
 st.markdown("")
 

@@ -12,6 +12,7 @@ from utils.data_loader import load_stores, load_daily_energy, load_store_sales
 from utils.charts import COLORS
 from utils.element_captions import get_page_captions, render_caption
 from utils.page_intelligence import render_page_intelligence
+from utils.rule_insights import render_insight_cards, generate_sector_insights, generate_chart_insight
 
 st.set_page_config(page_title="Sector Dashboard", page_icon="🏪", layout="wide")
 
@@ -95,6 +96,13 @@ with cols2[0]:
 
 st.markdown("")
 
+# ── Key Insights (rule-based, always visible) ──
+st.markdown("### Key Insights")
+_sector_insights = generate_sector_insights(pd.DataFrame(), filtered_energy, sector, energy_pct, avg_bo)
+render_insight_cards(_sector_insights)
+
+st.markdown("")
+
 # ── Store Performance Table ──
 store_agg = filtered_energy.groupby("store_id").agg(
     total_energy_cost=("total_energy_cost_mmk", "sum"),
@@ -147,6 +155,12 @@ with col1:
                       legend=dict(orientation="h", y=1.05))
     st.plotly_chart(fig, use_container_width=True)
     render_caption("cost_vs_sales", captions)
+    # Chart insight
+    if len(top10) > 0:
+        _worst = top10.sort_values("energy_pct", ascending=False).iloc[0]
+        _chart_ins = generate_chart_insight("energy_vs_sales", {
+            "top_store_name": _worst.get("name", ""), "top_energy_pct": _worst.get("energy_pct", 0)})
+        render_insight_cards(_chart_ins)
 
 with col2:
     st.markdown("### Daily Energy Trend")
@@ -161,6 +175,13 @@ with col2:
                       plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
     render_caption("energy_trend", captions)
+    # Chart insight — trend direction
+    if len(daily) >= 14:
+        _last7 = daily.tail(7)["diesel"].mean()
+        _prev7 = daily.iloc[-14:-7]["diesel"].mean()
+        _dir = "increasing" if _last7 > _prev7 * 1.05 else ("decreasing" if _last7 < _prev7 * 0.95 else "stable")
+        _trend_ins = generate_chart_insight("energy_trend", {"trend_direction": _dir})
+        render_insight_cards(_trend_ins)
 
 # ── Blackout Heatmap ──
 st.markdown("### Blackout Heatmap")
@@ -171,6 +192,12 @@ fig = go.Figure(data=go.Heatmap(z=pivot.values, x=pivot.columns, y=pivot.index,
 fig.update_layout(height=max(300, len(pivot) * 22), margin=dict(l=160, r=20, t=10, b=40))
 st.plotly_chart(fig, use_container_width=True)
 render_caption("blackout_heatmap", captions)
+# Chart insight — worst blackout store
+if len(pivot) > 0:
+    _worst_bo_store = pivot.mean(axis=1).idxmax()
+    _worst_bo_hrs = pivot.mean(axis=1).max()
+    _bo_ins = generate_chart_insight("blackout_heatmap", {"worst_store": _worst_bo_store, "worst_avg_hours": _worst_bo_hrs})
+    render_insight_cards(_bo_ins)
 
 # AI Insights merged into Page Intelligence at top
 
