@@ -32,23 +32,24 @@ RUN python -c "from apscheduler.schedulers.blocking import BlockingScheduler; pr
 # Set ownership for all data dirs
 RUN chown -R appuser:appuser /app
 
-# Make entrypoint executable
+# Make scripts executable
 RUN chmod +x /app/entrypoint.sh
 
-# Expose port
+# Default port (Railway/Render override via $PORT env var)
+ENV PORT=8510
 EXPOSE 8510
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8510/_stcore/health || exit 1
+# Health check uses $PORT so it works on Railway/Render/AWS
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
+    CMD curl -f http://localhost:${PORT}/_stcore/health || exit 1
 
-# Entrypoint fixes volume permissions at runtime, then runs CMD
+# Entrypoint fixes volume permissions at runtime
 ENTRYPOINT ["/app/entrypoint.sh"]
 
-# Run Streamlit
-CMD ["streamlit", "run", "app.py", \
-     "--server.port=8510", \
-     "--server.address=0.0.0.0", \
-     "--server.headless=true", \
-     "--browser.gatherUsageStats=false", \
-     "--server.fileWatcherType=none"]
+# Use shell form so $PORT is expanded at runtime
+CMD sh -c "streamlit run app.py \
+    --server.port=${PORT} \
+    --server.address=0.0.0.0 \
+    --server.headless=true \
+    --browser.gatherUsageStats=false \
+    --server.fileWatcherType=none"
