@@ -69,6 +69,20 @@ def render_page_intelligence(page_id: str, data_summary: str = ""):
     Flow: compute data hash → check DB → if match, display cached → else generate + save.
     """
     if not is_llm_available():
+        # Show rule-based fallback instead of nothing
+        st.markdown(f"""
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                <span style="font-size:1.2rem">📊</span>
+                <strong style="color:#1e293b">Data Summary</strong>
+                <span style="background:#f1f5f9;color:#64748b;padding:2px 10px;border-radius:20px;font-size:0.75rem">Rule-based mode</span>
+            </div>
+            <p style="margin:0;font-size:0.9rem;color:#475569">{data_summary}</p>
+            <p style="margin:8px 0 0;font-size:0.78rem;color:#94a3b8">
+                AI insights disabled — set OPENROUTER_API_KEY in .env to enable Descriptive / Predictive / Prescriptive analysis
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     from utils.database import get_cached_page_intelligence, save_page_intelligence
