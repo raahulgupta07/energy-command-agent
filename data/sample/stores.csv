@@ -1,0 +1,56 @@
+store_id,name,sector,channel,township,has_solar,generator_kw,cold_chain
+RH-001,Hypermarket Hlaing,Retail,Hypermarket,Hlaing,True,250,True
+RH-002,Hypermarket Insein,Retail,Hypermarket,Insein,True,250,True
+RH-003,Hypermarket Yankin,Retail,Hypermarket,Yankin,False,200,True
+RH-004,Hypermarket North Dagon,Retail,Hypermarket,North Dagon,False,200,True
+RH-005,Hypermarket Shwepyithar,Retail,Hypermarket,Shwepyithar,True,300,True
+RS-001,Super Kamayut,Retail,Supermarket,Kamayut,True,100,True
+RS-002,Super Mayangone,Retail,Supermarket,Mayangone,False,100,True
+RS-003,Super Tamwe,Retail,Supermarket,Tamwe,False,80,True
+RS-004,Super Bahan,Retail,Supermarket,Bahan,True,100,True
+RS-005,Super Sanchaung,Retail,Supermarket,Sanchaung,False,80,True
+RS-006,Super Dagon,Retail,Supermarket,Dagon,False,80,True
+RS-007,Super Thaketa,Retail,Supermarket,Thaketa,False,80,True
+RS-008,Super South Dagon,Retail,Supermarket,South Dagon,False,80,True
+RS-009,Super Thingangyun,Retail,Supermarket,Thingangyun,True,100,True
+RS-010,Super Hlaing Tharyar,Retail,Supermarket,Hlaing Tharyar,False,80,True
+RC-001,Conv. Botahtaung,Retail,Convenience,Botahtaung,False,30,False
+RC-002,Conv. Pazundaung,Retail,Convenience,Pazundaung,False,30,False
+RC-003,Conv. Latha,Retail,Convenience,Latha,False,25,False
+RC-004,Conv. Lanmadaw,Retail,Convenience,Lanmadaw,False,25,False
+RC-005,Conv. Kyimyindaing,Retail,Convenience,Kyimyindaing,False,25,False
+RC-006,Conv. Dawbon,Retail,Convenience,Dawbon,False,25,False
+RC-007,Conv. North Okkalapa,Retail,Convenience,North Okkalapa,False,30,False
+RC-008,Conv. South Okkalapa,Retail,Convenience,South Okkalapa,False,30,False
+RC-009,Conv. Mingalar Taung Nyunt,Retail,Convenience,Mingalar Taung Nyunt,False,25,False
+RC-010,Conv. East Dagon,Retail,Convenience,East Dagon,False,25,False
+FB-001,Bakery Kamayut,F&B,Bakery,Kamayut,True,60,True
+FB-002,Bakery Yankin,F&B,Bakery,Yankin,False,50,True
+FB-003,Bakery Hlaing,F&B,Bakery,Hlaing,False,50,True
+FB-004,Bakery Bahan,F&B,Bakery,Bahan,True,60,True
+FB-005,Bakery Insein,F&B,Bakery,Insein,False,50,True
+FR-001,Restaurant Sanchaung,F&B,Restaurant,Sanchaung,False,80,True
+FR-002,Restaurant Tamwe,F&B,Restaurant,Tamwe,False,80,True
+FR-003,Restaurant Mayangone,F&B,Restaurant,Mayangone,True,100,True
+FR-004,Restaurant Dagon,F&B,Restaurant,Dagon,False,80,True
+FR-005,Restaurant Hlaing Tharyar,F&B,Restaurant,Hlaing Tharyar,False,80,True
+FV-001,Beverage Botahtaung,F&B,Beverage,Botahtaung,False,20,False
+FV-002,Beverage Latha,F&B,Beverage,Latha,False,20,False
+FV-003,Beverage Pazundaung,F&B,Beverage,Pazundaung,False,20,False
+FV-004,Beverage Kyimyindaing,F&B,Beverage,Kyimyindaing,False,20,False
+FV-005,Beverage North Okkalapa,F&B,Beverage,North Okkalapa,False,20,False
+DW-001,Warehouse Hlaing Tharyar,Distribution,Warehouse,Hlaing Tharyar,True,200,False
+DW-002,Warehouse Shwepyithar,Distribution,Warehouse,Shwepyithar,True,200,False
+DW-003,Warehouse North Dagon,Distribution,Warehouse,North Dagon,False,150,False
+DC-001,Cold Chain Insein,Distribution,Cold Chain,Insein,True,180,True
+DC-002,Cold Chain Hlaing,Distribution,Cold Chain,Hlaing,False,150,True
+DC-003,Cold Chain Mayangone,Distribution,Cold Chain,Mayangone,False,150,True
+DL-001,Logistics Hub Shwepyithar,Distribution,Logistics,Shwepyithar,False,80,False
+DL-002,Logistics Hub East Dagon,Distribution,Logistics,East Dagon,False,80,False
+PM-001,Mall Central Yankin,Property,Mall,Yankin,True,500,True
+PM-002,Mall Junction Insein,Property,Mall,Insein,True,400,True
+PM-003,Mall Plaza Hlaing,Property,Mall,Hlaing,False,350,True
+PM-004,Mall City Dagon,Property,Mall,Dagon,False,350,True
+PO-001,Office Tower Kamayut,Property,Office,Kamayut,True,150,False
+PO-002,Office Park Bahan,Property,Office,Bahan,False,120,False
+PO-003,Office Hub Mayangone,Property,Office,Mayangone,False,120,False

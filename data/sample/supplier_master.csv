@@ -1,0 +1,5 @@
+supplier_id,supplier_name,region,contact_person,contact_phone,avg_lead_time_days,price_markup_pct,min_order_liters,bulk_discount_pct,bulk_threshold_liters,payment_terms,reliability_rating,serves_sectors,emergency_available,notes
+SUP-001,Myanmar Petroleum Corp,Yangon Central,U Kyaw Zin,+95-9-1234-5678,1.5,2.0,200,1.5,1000,NET7,A,ALL,True,"Primary supplier, best reliability"
+SUP-002,Shwe Taung Fuel Trading,Yangon South,Ma Aye Aye,+95-9-2345-6789,2.0,-1.0,500,2.0,2000,NET14,B,"Retail,Distribution",True,"Bulk discount specialist, slower but cheaper"
+SUP-003,Golden Eagle Diesel,Mandalay,Ko Aung Thu,+95-9-3456-7890,3.5,5.0,100,0.0,5000,COD,C,ALL,False,"Emergency backup, expensive but always has stock"
+SUP-004,Delta Fuel Supply,Ayeyarwady,Daw Thin Thin,+95-9-4567-8901,1.0,0.0,300,1.0,1500,NET7,A,"F&B,Property",True,"Local delta region supplier, fast delivery"

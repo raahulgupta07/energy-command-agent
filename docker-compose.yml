@@ -1,0 +1,26 @@
+services:
+  energy-intelligence:
+    build: .
+    container_name: energy-command-agent
+    ports:
+      - "8510:8510"
+    volumes:
+      # Persist user-uploaded real data outside container
+      - eis-real-data:/app/data/real
+      # Persist SQLite database outside container
+      - eis-database:/app/data/db
+    env_file:
+      - .env
+    environment:
+      - EIS_AGENT_ENABLED=${EIS_AGENT_ENABLED:-true}
+      - EIS_DATA_SOURCE=${EIS_DATA_SOURCE:-sample}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - EIS_SMTP_SERVER=${EIS_SMTP_SERVER:-}
+      - EIS_SMTP_PORT=${EIS_SMTP_PORT:-587}
+      - EIS_SMTP_USER=${EIS_SMTP_USER:-}
+      - EIS_SMTP_PASSWORD=${EIS_SMTP_PASSWORD:-}
+    restart: unless-stopped
+
+volumes:
+  eis-real-data:
+  eis-database:

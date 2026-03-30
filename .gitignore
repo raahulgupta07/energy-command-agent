@@ -1,0 +1,41 @@
+# Environment & secrets
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.db-wal
+*.db-shm
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# User-uploaded real data (may contain sensitive business data)
+data/real/*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Logs
+*.log
+
+# Docker volumes (local)
+eis-data/
+eis-db/

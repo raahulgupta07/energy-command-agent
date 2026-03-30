@@ -1,0 +1,112 @@
+maintenance_id,date,store_id,maintenance_type,description,downtime_hours,cost_mmk,parts_replaced,next_service_date,technician,generator_hours_at_service,status
+MNT-2026-0001,2026-01-12,RH-001,INSPECTION,Inspection - minor oil leak noted,0.0,129857,,2026-03-17,Delta Power Solutions,2698,COMPLETED
+MNT-2026-0002,2025-12-16,RH-002,EMERGENCY,Fuel injector failure - replaced,22.7,1034114,Battery 12V 200Ah,2026-04-09,Yangon Generator Maintenance,3180,COMPLETED
+MNT-2026-0003,2026-01-23,RH-002,EMERGENCY,Alternator failure - rewound,7.3,1360367,Alternator assembly,2026-04-06,U Than Win - PowerGen Services,3674,COMPLETED
+MNT-2026-0004,2026-03-07,RH-002,SCHEDULED,500-hour service interval,3.8,299282,"Fuel filter, Oil filter, V-belt",2026-06-27,Generator Myanmar Co.,4152,COMPLETED
+MNT-2026-0005,2026-02-22,RH-003,SCHEDULED,Oil change + air filter replacement,2.1,214932,"Coolant 10L, Thermostat, Hoses",2026-05-07,Yangon Generator Maintenance,5076,COMPLETED
+MNT-2026-0006,2025-12-12,RH-004,SCHEDULED,Annual comprehensive service,1.4,474324,"Oil filter, Air filter, Engine oil 15L",2026-03-20,Generator Myanmar Co.,6172,COMPLETED
+MNT-2026-0007,2026-02-26,RH-004,SCHEDULED,Oil change + air filter replacement,3.0,513246,"Oil filter, Air filter, Engine oil 15L",2026-04-29,Generator Myanmar Co.,6511,COMPLETED
+MNT-2026-0008,2026-01-26,RH-005,SCHEDULED,Annual comprehensive service,3.7,537456,"Fuel filter, Oil filter, V-belt",2026-03-29,U Than Win - PowerGen Services,3347,COMPLETED
+MNT-2026-0009,2026-02-22,RH-005,EMERGENCY,Radiator leak - patched and refilled,13.4,697947,"Radiator patch kit, Coolant 20L",2026-06-12,Ko Htun Htun - Freelance,3746,COMPLETED
+MNT-2026-0010,2026-03-01,RH-005,SCHEDULED,Oil change + air filter replacement,2.3,573389,"Oil filter, Air filter, Engine oil 15L",2026-06-26,Ko Htun Htun - Freelance,4013,COMPLETED
+MNT-2026-0011,2025-12-05,RS-001,INSPECTION,Pre-monsoon readiness check,0.0,123074,,2026-02-26,Yangon Generator Maintenance,5196,COMPLETED
+MNT-2026-0012,2026-03-09,RS-001,SCHEDULED,Annual comprehensive service,1.5,293690,"Oil filter, Air filter, Engine oil 15L",2026-06-04,Generator Myanmar Co.,5592,COMPLETED
+MNT-2026-0013,2025-12-19,RS-002,INSPECTION,Routine inspection - all OK,0.0,88886,,2026-04-14,U Than Win - PowerGen Services,4571,COMPLETED
+MNT-2026-0014,2025-12-21,RS-003,SCHEDULED,500-hour service interval,3.5,334584,"Fuel filter, Oil filter, V-belt",2026-04-15,U Than Win - PowerGen Services,3598,COMPLETED
+MNT-2026-0015,2026-01-07,RS-003,INSPECTION,Routine inspection - all OK,0.0,135183,,2026-03-17,Yangon Generator Maintenance,4115,COMPLETED
+MNT-2026-0016,2026-03-11,RS-003,SCHEDULED,Coolant flush + belt inspection,2.6,562329,"Oil filter, Air filter, Engine oil 15L",2026-06-01,Ko Htun Htun - Freelance,4569,COMPLETED
+MNT-2026-0017,2025-11-24,RS-004,SCHEDULED,500-hour service interval,2.8,326049,"Oil filter, Air filter, Engine oil 15L",2026-02-18,Ko Htun Htun - Freelance,4946,COMPLETED
+MNT-2026-0018,2026-01-25,RS-005,SCHEDULED,500-hour service interval,3.3,493440,"Coolant 10L, Thermostat, Hoses",2026-04-06,Generator Myanmar Co.,3167,COMPLETED
+MNT-2026-0019,2026-02-01,RS-005,INSPECTION,Routine inspection - all OK,0.0,134759,,2026-05-23,Ko Htun Htun - Freelance,3722,COMPLETED
+MNT-2026-0020,2026-03-20,RS-005,INSPECTION,Inspection - minor oil leak noted,0.0,136393,,2026-05-19,Generator Myanmar Co.,3981,SCHEDULED
+MNT-2026-0021,2025-12-15,RS-006,SCHEDULED,Coolant flush + belt inspection,3.7,581525,"Coolant 10L, Thermostat, Hoses",2026-02-19,Delta Power Solutions,5421,COMPLETED
+MNT-2026-0022,2026-03-25,RS-006,EMERGENCY,Battery failure - replaced,9.0,1929728,"Starter motor, Solenoid",2026-07-14,Delta Power Solutions,5639,SCHEDULED
+MNT-2026-0023,2026-03-26,RS-006,SCHEDULED,500-hour service interval,3.7,461675,"Fuel filter, Oil filter, V-belt",2026-07-05,Yangon Generator Maintenance,6230,SCHEDULED
+MNT-2026-0024,2025-12-12,RS-007,SCHEDULED,500-hour service interval,2.5,364919,"Air filter, Spark plugs x4",2026-03-04,Delta Power Solutions,5547,COMPLETED
+MNT-2026-0025,2026-02-22,RS-007,SCHEDULED,Annual comprehensive service,3.9,568478,"Coolant 10L, Thermostat, Hoses",2026-05-18,Yangon Generator Maintenance,6131,COMPLETED
+MNT-2026-0026,2026-03-05,RS-007,SCHEDULED,500-hour service interval,3.3,452983,"Coolant 10L, Thermostat, Hoses",2026-05-22,Ko Htun Htun - Freelance,6647,COMPLETED
+MNT-2026-0027,2025-10-24,RS-008,SCHEDULED,Oil change + air filter replacement,1.3,501330,"Air filter, Spark plugs x4",2026-01-05,Ko Htun Htun - Freelance,5446,COMPLETED
+MNT-2026-0028,2025-10-28,RS-008,EMERGENCY,Alternator failure - rewound,9.1,1752539,Alternator assembly,2026-01-20,Delta Power Solutions,5836,COMPLETED
+MNT-2026-0029,2025-10-11,RS-009,SCHEDULED,Coolant flush + belt inspection,3.3,285679,"Coolant 10L, Thermostat, Hoses",2025-12-19,Yangon Generator Maintenance,3314,COMPLETED
+MNT-2026-0030,2026-01-21,RS-009,EMERGENCY,Battery failure - replaced,23.6,676438,"Radiator patch kit, Coolant 20L",2026-04-27,Delta Power Solutions,3604,COMPLETED
+MNT-2026-0031,2026-02-19,RS-009,SCHEDULED,Annual comprehensive service,1.4,399954,"Coolant 10L, Thermostat, Hoses",2026-05-18,Yangon Generator Maintenance,4010,COMPLETED
+MNT-2026-0032,2025-12-11,RS-010,SCHEDULED,Annual comprehensive service,3.2,540257,"Fuel filter, Oil filter, V-belt",2026-02-16,Delta Power Solutions,4487,COMPLETED
+MNT-2026-0033,2026-02-01,RS-010,SCHEDULED,Coolant flush + belt inspection,3.8,324517,"Oil filter, Air filter, Engine oil 15L",2026-05-13,U Than Win - PowerGen Services,4701,COMPLETED
+MNT-2026-0034,2026-02-12,RC-001,INSPECTION,Pre-monsoon readiness check,0.0,125443,,2026-04-22,Yangon Generator Maintenance,5692,COMPLETED
+MNT-2026-0035,2025-12-06,RC-002,SCHEDULED,500-hour service interval,3.6,460380,"Coolant 10L, Thermostat, Hoses",2026-03-09,Delta Power Solutions,4512,COMPLETED
+MNT-2026-0036,2026-01-28,RC-003,SCHEDULED,500-hour service interval,3.3,591444,"Coolant 10L, Thermostat, Hoses",2026-04-15,Ko Htun Htun - Freelance,4009,COMPLETED
+MNT-2026-0037,2025-10-02,RC-004,EMERGENCY,Battery failure - replaced,23.8,1457150,"Fuel injector x2, Gasket set",2025-12-29,U Than Win - PowerGen Services,2707,COMPLETED
+MNT-2026-0038,2025-11-15,RC-005,SCHEDULED,Annual comprehensive service,2.1,221643,"Coolant 10L, Thermostat, Hoses",2026-01-29,Generator Myanmar Co.,4452,COMPLETED
+MNT-2026-0039,2026-01-03,RC-005,SCHEDULED,Oil change + air filter replacement,1.4,433796,"Oil filter, Air filter, Engine oil 15L",2026-04-15,Ko Htun Htun - Freelance,4943,COMPLETED
+MNT-2026-0040,2026-02-07,RC-005,INSPECTION,Inspection - minor oil leak noted,0.0,116220,,2026-04-29,U Than Win - PowerGen Services,5255,COMPLETED
+MNT-2026-0041,2025-10-11,RC-006,INSPECTION,Routine inspection - all OK,0.0,58558,,2026-02-03,Generator Myanmar Co.,3480,COMPLETED
+MNT-2026-0042,2025-10-16,RC-006,SCHEDULED,500-hour service interval,1.0,438408,"Fuel filter, Oil filter, V-belt",2026-01-07,U Than Win - PowerGen Services,3773,COMPLETED
+MNT-2026-0043,2026-01-28,RC-006,SCHEDULED,Annual comprehensive service,2.5,362373,"Coolant 10L, Thermostat, Hoses",2026-05-04,Delta Power Solutions,4012,COMPLETED
+MNT-2026-0044,2025-12-30,RC-007,EMERGENCY,Battery failure - replaced,12.2,1378626,Battery 12V 200Ah,2026-03-11,U Than Win - PowerGen Services,4291,COMPLETED
+MNT-2026-0045,2026-03-04,RC-007,SCHEDULED,Oil change + air filter replacement,1.1,252620,"Coolant 10L, Thermostat, Hoses",2026-05-16,U Than Win - PowerGen Services,4809,COMPLETED
+MNT-2026-0046,2025-11-21,RC-008,SCHEDULED,Coolant flush + belt inspection,2.0,486132,"Coolant 10L, Thermostat, Hoses",2026-03-01,Delta Power Solutions,4195,COMPLETED
+MNT-2026-0047,2026-03-06,RC-008,EMERGENCY,Starter motor replacement,15.7,675895,"Radiator patch kit, Coolant 20L",2026-06-28,U Than Win - PowerGen Services,4786,COMPLETED
+MNT-2026-0048,2025-12-17,RC-009,EMERGENCY,Starter motor replacement,21.0,1049293,"Radiator patch kit, Coolant 20L",2026-03-11,Delta Power Solutions,6208,COMPLETED
+MNT-2026-0049,2025-10-02,RC-010,INSPECTION,Pre-monsoon readiness check,0.0,70033,,2026-01-03,Yangon Generator Maintenance,6001,COMPLETED
+MNT-2026-0050,2025-11-21,RC-010,SCHEDULED,Annual comprehensive service,3.9,480292,"Coolant 10L, Thermostat, Hoses",2026-03-16,Yangon Generator Maintenance,6478,COMPLETED
+MNT-2026-0051,2026-03-11,RC-010,INSPECTION,Inspection - minor oil leak noted,0.0,86498,,2026-06-21,Generator Myanmar Co.,7060,COMPLETED
+MNT-2026-0052,2026-02-03,FB-001,SCHEDULED,Annual comprehensive service,1.4,596286,"Fuel filter, Oil filter, V-belt",2026-04-22,U Than Win - PowerGen Services,5063,COMPLETED
+MNT-2026-0053,2026-02-23,FB-001,INSPECTION,Routine inspection - all OK,0.0,86697,,2026-05-19,U Than Win - PowerGen Services,5469,COMPLETED
+MNT-2026-0054,2026-03-10,FB-002,SCHEDULED,Coolant flush + belt inspection,1.0,448020,"Coolant 10L, Thermostat, Hoses",2026-07-01,Delta Power Solutions,2830,COMPLETED
+MNT-2026-0055,2025-12-01,FB-003,SCHEDULED,Coolant flush + belt inspection,1.8,595324,"Air filter, Spark plugs x4",2026-02-12,Generator Myanmar Co.,4584,COMPLETED
+MNT-2026-0056,2026-03-08,FB-003,EMERGENCY,Fuel injector failure - replaced,12.7,615559,Alternator assembly,2026-06-12,Yangon Generator Maintenance,4997,COMPLETED
+MNT-2026-0057,2026-03-09,FB-004,SCHEDULED,Annual comprehensive service,2.2,516214,"Air filter, Spark plugs x4",2026-05-17,Delta Power Solutions,3292,COMPLETED
+MNT-2026-0058,2025-12-12,FB-005,EMERGENCY,Radiator leak - patched and refilled,17.1,1269072,"Starter motor, Solenoid",2026-04-06,Delta Power Solutions,4443,COMPLETED
+MNT-2026-0059,2026-02-01,FB-005,EMERGENCY,Starter motor replacement,19.7,1077502,"Radiator patch kit, Coolant 20L",2026-05-14,Ko Htun Htun - Freelance,4769,COMPLETED
+MNT-2026-0060,2025-11-29,FR-001,SCHEDULED,Oil change + air filter replacement,3.8,534992,"Coolant 10L, Thermostat, Hoses",2026-03-01,Generator Myanmar Co.,3047,COMPLETED
+MNT-2026-0061,2025-12-09,FR-001,INSPECTION,Inspection - minor oil leak noted,0.0,147994,,2026-04-04,Ko Htun Htun - Freelance,3361,COMPLETED
+MNT-2026-0062,2025-11-08,FR-002,SCHEDULED,Oil change + air filter replacement,3.9,449573,"Air filter, Spark plugs x4",2026-01-26,U Than Win - PowerGen Services,5204,COMPLETED
+MNT-2026-0063,2026-01-16,FR-002,SCHEDULED,500-hour service interval,3.1,459260,"Air filter, Spark plugs x4",2026-05-02,Generator Myanmar Co.,5671,COMPLETED
+MNT-2026-0064,2025-11-05,FR-003,EMERGENCY,Starter motor replacement,10.1,1725490,"Starter motor, Solenoid",2026-01-15,Ko Htun Htun - Freelance,3934,COMPLETED
+MNT-2026-0065,2025-11-30,FR-003,EMERGENCY,Starter motor replacement,12.5,890598,Alternator assembly,2026-03-25,Delta Power Solutions,4512,COMPLETED
+MNT-2026-0066,2025-12-10,FR-003,SCHEDULED,Annual comprehensive service,1.7,525897,"Air filter, Spark plugs x4",2026-03-19,U Than Win - PowerGen Services,4979,COMPLETED
+MNT-2026-0067,2025-12-08,FR-004,SCHEDULED,Annual comprehensive service,1.8,538960,"Coolant 10L, Thermostat, Hoses",2026-03-17,Generator Myanmar Co.,5345,COMPLETED
+MNT-2026-0068,2025-12-28,FR-004,SCHEDULED,Coolant flush + belt inspection,1.3,231251,"Fuel filter, Oil filter, V-belt",2026-04-16,Ko Htun Htun - Freelance,5628,COMPLETED
+MNT-2026-0069,2026-01-08,FR-004,SCHEDULED,500-hour service interval,1.8,597552,"Oil filter, Air filter, Engine oil 15L",2026-05-02,Yangon Generator Maintenance,5921,COMPLETED
+MNT-2026-0070,2025-10-24,FR-005,SCHEDULED,Annual comprehensive service,3.8,217267,"Fuel filter, Oil filter, V-belt",2026-02-08,Ko Htun Htun - Freelance,4180,COMPLETED
+MNT-2026-0071,2025-11-24,FR-005,INSPECTION,Routine inspection - all OK,0.0,78115,,2026-01-27,Ko Htun Htun - Freelance,4696,COMPLETED
+MNT-2026-0072,2025-10-26,FV-001,EMERGENCY,Alternator failure - rewound,4.2,825616,"Fuel injector x2, Gasket set",2026-01-23,Generator Myanmar Co.,4464,COMPLETED
+MNT-2026-0073,2025-11-11,FV-001,INSPECTION,Inspection - minor oil leak noted,0.0,53532,,2026-02-25,Yangon Generator Maintenance,4771,COMPLETED
+MNT-2026-0074,2025-11-20,FV-001,INSPECTION,Routine inspection - all OK,0.0,54825,,2026-03-13,U Than Win - PowerGen Services,5141,COMPLETED
+MNT-2026-0075,2025-11-13,FV-002,SCHEDULED,Annual comprehensive service,1.4,546287,"Air filter, Spark plugs x4",2026-02-12,Ko Htun Htun - Freelance,5393,COMPLETED
+MNT-2026-0076,2025-11-19,FV-002,INSPECTION,Inspection - minor oil leak noted,0.0,121294,,2026-02-12,Delta Power Solutions,5690,COMPLETED
+MNT-2026-0077,2026-02-18,FV-002,EMERGENCY,Battery failure - replaced,23.5,1241548,"Fuel injector x2, Gasket set",2026-06-02,Generator Myanmar Co.,6191,COMPLETED
+MNT-2026-0078,2025-11-22,FV-003,INSPECTION,Pre-monsoon readiness check,0.0,64189,,2026-03-09,U Than Win - PowerGen Services,4763,COMPLETED
+MNT-2026-0079,2025-12-26,FV-003,INSPECTION,Pre-monsoon readiness check,0.0,69855,,2026-04-01,U Than Win - PowerGen Services,5142,COMPLETED
+MNT-2026-0080,2026-01-21,FV-003,SCHEDULED,Annual comprehensive service,2.2,379704,"Oil filter, Air filter, Engine oil 15L",2026-05-05,U Than Win - PowerGen Services,5672,COMPLETED
+MNT-2026-0081,2026-03-18,FV-004,EMERGENCY,Battery failure - replaced,15.4,680361,Alternator assembly,2026-07-04,U Than Win - PowerGen Services,4531,COMPLETED
+MNT-2026-0082,2025-11-28,FV-005,SCHEDULED,Oil change + air filter replacement,3.1,334261,"Fuel filter, Oil filter, V-belt",2026-02-15,Delta Power Solutions,4542,COMPLETED
+MNT-2026-0083,2025-11-30,FV-005,SCHEDULED,Oil change + air filter replacement,1.9,426614,"Oil filter, Air filter, Engine oil 15L",2026-03-04,Ko Htun Htun - Freelance,4862,COMPLETED
+MNT-2026-0084,2026-02-08,FV-005,SCHEDULED,Annual comprehensive service,1.3,333751,"Coolant 10L, Thermostat, Hoses",2026-05-19,Generator Myanmar Co.,5274,COMPLETED
+MNT-2026-0085,2025-10-16,DW-001,EMERGENCY,Fuel injector failure - replaced,15.7,1427981,Alternator assembly,2025-12-27,Yangon Generator Maintenance,3419,COMPLETED
+MNT-2026-0086,2025-11-26,DW-001,SCHEDULED,500-hour service interval,1.4,351079,"Coolant 10L, Thermostat, Hoses",2026-03-07,U Than Win - PowerGen Services,3836,COMPLETED
+MNT-2026-0087,2025-11-28,DW-001,SCHEDULED,Oil change + air filter replacement,2.3,272945,"Oil filter, Air filter, Engine oil 15L",2026-03-19,Yangon Generator Maintenance,4193,COMPLETED
+MNT-2026-0088,2025-11-01,DW-002,EMERGENCY,Fuel injector failure - replaced,19.3,988916,"Radiator patch kit, Coolant 20L",2026-01-05,Yangon Generator Maintenance,3797,COMPLETED
+MNT-2026-0089,2026-01-01,DW-002,SCHEDULED,500-hour service interval,1.0,325389,"Oil filter, Air filter, Engine oil 15L",2026-03-26,Generator Myanmar Co.,4223,COMPLETED
+MNT-2026-0090,2026-03-19,DW-003,SCHEDULED,Annual comprehensive service,2.9,269998,"Air filter, Spark plugs x4",2026-06-09,Yangon Generator Maintenance,4436,COMPLETED
+MNT-2026-0091,2025-10-17,DC-001,SCHEDULED,500-hour service interval,2.4,325173,"Coolant 10L, Thermostat, Hoses",2026-01-14,Yangon Generator Maintenance,3668,COMPLETED
+MNT-2026-0092,2026-03-11,DC-001,SCHEDULED,500-hour service interval,3.8,452855,"Coolant 10L, Thermostat, Hoses",2026-05-27,Ko Htun Htun - Freelance,4148,COMPLETED
+MNT-2026-0093,2025-12-02,DC-002,INSPECTION,Routine inspection - all OK,0.0,50115,,2026-03-09,Generator Myanmar Co.,2900,COMPLETED
+MNT-2026-0094,2026-02-19,DC-002,SCHEDULED,Coolant flush + belt inspection,3.2,208344,"Oil filter, Air filter, Engine oil 15L",2026-05-31,Ko Htun Htun - Freelance,3168,COMPLETED
+MNT-2026-0095,2026-03-27,DC-003,SCHEDULED,Coolant flush + belt inspection,3.1,439680,"Oil filter, Air filter, Engine oil 15L",2026-06-20,Delta Power Solutions,4441,SCHEDULED
+MNT-2026-0096,2025-12-08,DL-001,SCHEDULED,Annual comprehensive service,2.3,296792,"Air filter, Spark plugs x4",2026-02-17,Generator Myanmar Co.,5385,COMPLETED
+MNT-2026-0097,2026-03-28,DL-001,SCHEDULED,Coolant flush + belt inspection,1.9,564617,"Coolant 10L, Thermostat, Hoses",2026-07-08,Generator Myanmar Co.,5979,SCHEDULED
+MNT-2026-0098,2025-12-04,DL-002,INSPECTION,Pre-monsoon readiness check,0.0,138247,,2026-04-02,Ko Htun Htun - Freelance,3351,COMPLETED
+MNT-2026-0099,2025-10-08,PM-001,INSPECTION,Pre-monsoon readiness check,0.0,96215,,2026-01-13,U Than Win - PowerGen Services,4676,COMPLETED
+MNT-2026-0100,2025-10-14,PM-001,SCHEDULED,Annual comprehensive service,3.3,460824,"Oil filter, Air filter, Engine oil 15L",2026-02-04,Ko Htun Htun - Freelance,5273,COMPLETED
+MNT-2026-0101,2025-12-10,PM-001,SCHEDULED,Coolant flush + belt inspection,3.0,221035,"Oil filter, Air filter, Engine oil 15L",2026-02-19,Delta Power Solutions,5494,COMPLETED
+MNT-2026-0102,2026-02-02,PM-002,SCHEDULED,Coolant flush + belt inspection,3.3,395871,"Coolant 10L, Thermostat, Hoses",2026-05-27,Yangon Generator Maintenance,3871,COMPLETED
+MNT-2026-0103,2025-10-15,PM-003,SCHEDULED,Oil change + air filter replacement,1.5,295214,"Fuel filter, Oil filter, V-belt",2026-02-04,Generator Myanmar Co.,5966,COMPLETED
+MNT-2026-0104,2025-11-23,PM-003,INSPECTION,Routine inspection - all OK,0.0,134047,,2026-03-12,Generator Myanmar Co.,6523,COMPLETED
+MNT-2026-0105,2025-11-19,PM-004,SCHEDULED,Annual comprehensive service,2.2,387986,"Coolant 10L, Thermostat, Hoses",2026-03-13,Delta Power Solutions,5858,COMPLETED
+MNT-2026-0106,2025-11-25,PM-004,SCHEDULED,Oil change + air filter replacement,3.9,476609,"Fuel filter, Oil filter, V-belt",2026-03-22,Generator Myanmar Co.,6394,COMPLETED
+MNT-2026-0107,2026-02-13,PM-004,SCHEDULED,Coolant flush + belt inspection,1.9,306957,"Coolant 10L, Thermostat, Hoses",2026-05-01,U Than Win - PowerGen Services,6682,COMPLETED
+MNT-2026-0108,2025-10-21,PO-001,EMERGENCY,Radiator leak - patched and refilled,14.9,908675,Alternator assembly,2026-01-19,U Than Win - PowerGen Services,2937,COMPLETED
+MNT-2026-0109,2026-02-22,PO-002,SCHEDULED,Annual comprehensive service,1.4,336515,"Coolant 10L, Thermostat, Hoses",2026-04-28,Yangon Generator Maintenance,3503,COMPLETED
+MNT-2026-0110,2025-12-16,PO-003,SCHEDULED,Annual comprehensive service,1.9,243786,"Oil filter, Air filter, Engine oil 15L",2026-03-15,Delta Power Solutions,3050,COMPLETED
+MNT-2026-0111,2026-01-17,PO-003,SCHEDULED,Annual comprehensive service,2.4,459966,"Coolant 10L, Thermostat, Hoses",2026-05-08,Ko Htun Htun - Freelance,3590,COMPLETED
