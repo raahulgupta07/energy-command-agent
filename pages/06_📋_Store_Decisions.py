@@ -115,13 +115,30 @@ if tab == "Operating Plan":
         """, unsafe_allow_html=True)
 
         for _, row in mode_stores.iterrows():
+            ebitda_hr = row.get('ebitda_per_hr', 0)
+            ebitda_color = "#16a34a" if ebitda_hr > 0 else "#ef4444"
+            sector_rule = row.get('sector_rule_applied', '')
+            precool = row.get('precool_note', '')
+            solar_shift = row.get('solar_shift_note', '')
+
             c1, c2, c3, c4, c5 = st.columns([3, 2, 2, 2, 1])
             c1.write(f"**{row['name']}**")
-            c2.write(row["reason"][:50])
-            c3.write(f"EBITDA/hr: {row.get('ebitda_per_hr', 0):,.0f}")
-            c4.write(f"Diesel: {row['diesel_days_remaining']:.1f} days")
+            c2.markdown(f"<span style='color:{ebitda_color};font-weight:600'>{ebitda_hr:,.0f} MMK/hr</span>", unsafe_allow_html=True)
+            c3.write(f"Diesel: {row['diesel_days_remaining']:.1f} days")
+            c4.write(row["reason"][:45])
             with c5:
                 ui.badges(badge_list=[(mode_key, variant)], key=f"mode_{row['store_id']}")
+
+            # Inline warnings for sector rules, pre-cool, solar shift
+            warnings = []
+            if sector_rule:
+                warnings.append(f"<span style='background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:4px;font-size:0.75rem'>{sector_rule}</span>")
+            if precool:
+                warnings.append(f"<span style='background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:0.75rem'>Pre-cool: {precool}</span>")
+            if solar_shift:
+                warnings.append(f"<span style='background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:0.75rem'>Solar: {solar_shift}</span>")
+            if warnings:
+                st.markdown(" ".join(warnings), unsafe_allow_html=True)
 
     # Full table with EBITDA/hr columns
     st.markdown("### Full Plan Table")

@@ -125,7 +125,29 @@ with cols3[3]:
 
 st.markdown("")
 
-# ── Tabs ──
+# ── Email Report + Tabs ──
+ec1, ec2, ec3 = st.columns([6, 2, 2])
+with ec2:
+    if st.button("📧 Email Report", key="email_top", use_container_width=True):
+        from utils.email_alerts import is_email_enabled, send_email
+        from utils.report_generator import generate_weekly_ebitda_report
+        if is_email_enabled():
+            from config.settings import EMAIL_CONFIG
+            report = generate_weekly_ebitda_report(gk, sk)
+            recipients = EMAIL_CONFIG["recipients"].get("holdings_gecc", []) + EMAIL_CONFIG["recipients"].get("cfo", [])
+            if recipients:
+                send_email(recipients, report["subject"], report["html"])
+                st.success(f"Sent to {len(recipients)} recipients")
+            else:
+                st.warning("No recipients in EMAIL_CONFIG")
+        else:
+            st.warning("Email not configured — set EIS_SMTP_USER in .env")
+with ec3:
+    from utils.template_generator import generate_template as _gt
+    st.download_button("📋 Data Template", data=_gt(), file_name="EIS_Template.xlsx",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
+                       use_container_width=True, key="tpl_holdings")
+
 tab = ui.tabs(options=["Overview", "ERI Ranking", "Energy Mix", "AI Adoption", "Data Quality"],
               default_value="Overview", key="holdings_tabs")
 
