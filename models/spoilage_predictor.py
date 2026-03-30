@@ -183,6 +183,124 @@ class SpoilagePredictor:
 
         return pd.DataFrame(results).sort_values("spoilage_probability", ascending=False)
 
+    def calculate_precool_recommendation(self, stores_df: pd.DataFrame,
+                                          temp_df: pd.DataFrame,
+                                          blackout_predictions: pd.DataFrame = None,
+                                          as_of_date=None) -> pd.DataFrame:
+        """Pre-cooling recommendations before predicted blackouts (D1).
+
+        If blackout probability > 0.6, recommend lowering cold chain temperature
+        before the blackout hits to create a thermal buffer.
+
+        Returns:
+            DataFrame: store, zone, current_temp, precool_target, buffer_hours_gained
+        """
+        cold_stores = stores_df[stores_df["cold_chain"] == True]
+        results = []
+
+        for _, store in cold_stores.iterrows():
+            sid = store["store_id"]
+
+            # Get blackout probability
+            blackout_prob = 0.5
+            if blackout_predictions is not None and len(blackout_predictions) > 0:
+                bp = blackout_predictions[blackout_predictions["store_id"] == sid]
+                if len(bp) > 0:
+                    blackout_prob = bp["blackout_probability"].values[0]
+
+            if blackout_prob < 0.5:
+                continue  # No pre-cool needed for low-risk stores
+
+            # Get current temperatures
+            if as_of_date is not None:
+                store_temp = temp_df[(temp_df["store_id"] == sid) & (temp_df["date"] == as_of_date)]
+            else:
+                latest_date = temp_df[temp_df["store_id"] == sid]["date"].max()
+                store_temp = temp_df[(temp_df["store_id"] == sid) & (temp_df["date"] == latest_date)]
+
+            for zone_name, zone_config in self.zone_thresholds.items():
+                zone_temp = store_temp[store_temp["zone"] == zone_name]
+                current_temp = zone_temp["temperature_c"].mean() if len(zone_temp) > 0 else zone_config["critical_temp"] - 2
+
+                # Thermal tolerance: how long until reaching critical temp from current
+                tolerance = self.calculate_thermal_tolerance(
+                    current_temp, zone_config["critical_temp"], zone_name
+                )
+
+                # Pre-cool target: lower by 2-4 degrees to gain buffer hours
+                precool_degrees = min(4, zone_config["critical_temp"] - current_temp - 1)
+                if precool_degrees <= 0:
+                    precool_degrees = 2  # Always try to gain at least some buffer
+
+                precool_target = current_temp - precool_degrees
+                tolerance_after_precool = self.calculate_thermal_tolerance(
+                    precool_target, zone_config["critical_temp"], zone_name
+                )
+                buffer_hours_gained = tolerance_after_precool - tolerance
+
+                # Urgency
+                if blackout_prob >= 0.8:
+                    urgency = "IMMEDIATE"
+                    action = f"Pre-cool {zone_name} to {precool_target:.1f}°C NOW — blackout {blackout_prob*100:.0f}% likely"
+                elif blackout_prob >= 0.6:
+                    urgency = "RECOMMENDED"
+                    action = f"Lower {zone_name} to {precool_target:.1f}°C before afternoon — gains {buffer_hours_gained:.1f}hr buffer"
+                else:
+                    urgency = "ADVISORY"
+                    action = f"Consider pre-cooling {zone_name} if conditions worsen"
+
+                results.append({
+                    "store_id": sid,
+                    "name": store["name"],
+                    "sector": store["sector"],
+                    "zone": zone_name,
+                    "current_temp_c": round(current_temp, 1),
+                    "precool_target_c": round(precool_target, 1),
+                    "critical_temp_c": zone_config["critical_temp"],
+                    "current_tolerance_hours": round(tolerance, 1),
+                    "tolerance_after_precool_hours": round(tolerance_after_precool, 1),
+                    "buffer_hours_gained": round(buffer_hours_gained, 1),
+                    "blackout_probability": round(blackout_prob, 3),
+                    "urgency": urgency,
+                    "action": action,
+                })
+
+        return pd.DataFrame(results) if results else pd.DataFrame()
+
+    def calculate_thermal_tolerance(self, current_temp: float, critical_temp: float,
+                                     zone: str) -> float:
+        """Calculate hours until cold chain reaches critical temperature (D2).
+
+        Simplified thermal model based on Newton's law of cooling.
+        Assumes ambient temperature of 30°C (Myanmar) and zone-specific insulation.
+
+        Returns:
+            float: hours until critical temperature is reached
+        """
+        ambient_temp = 30.0  # Typical Myanmar ambient
+
+        # Insulation factors (hours to reach ambient from target — higher = better insulated)
+        insulation = {
+            "Dairy": 6.0,       # Walk-in cooler, moderate insulation
+            "Frozen": 12.0,     # Freezer, heavy insulation
+            "Fresh Produce": 5.0,  # Display case, lighter insulation
+        }
+
+        insulation_hours = insulation.get(zone, 6.0)
+
+        # Temperature difference ratios
+        temp_range = abs(ambient_temp - current_temp)
+        critical_range = abs(ambient_temp - critical_temp)
+
+        if temp_range <= 0 or critical_range <= 0:
+            return 0.0
+
+        # Simplified: time proportional to how far we are from critical vs total range
+        fraction_to_critical = abs(critical_temp - current_temp) / temp_range
+        tolerance_hours = insulation_hours * fraction_to_critical
+
+        return max(0, tolerance_hours)
+
     def get_alerts(self, risk_df: pd.DataFrame) -> list:
         """Generate spoilage alerts."""
         alerts = []

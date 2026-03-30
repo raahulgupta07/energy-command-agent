@@ -163,6 +163,95 @@ class BlackoutPredictor:
 
         return results.sort_values("blackout_probability", ascending=False)
 
+    def predict_72hr_windows(self, energy_df: pd.DataFrame, stores_df: pd.DataFrame,
+                              target_date=None) -> pd.DataFrame:
+        """Predict blackout probability for 72-hour horizon in 4-hour windows (C1).
+
+        Returns:
+            DataFrame: store_id, date, window (e.g. "06:00-10:00"), probability
+        """
+        if target_date is None:
+            target_date = energy_df["date"].max() + timedelta(days=1)
+
+        windows = [
+            ("00:00-04:00", 0), ("04:00-08:00", 4), ("08:00-12:00", 8),
+            ("12:00-16:00", 12), ("16:00-20:00", 16), ("20:00-24:00", 20),
+        ]
+
+        results = []
+        for day_offset in range(3):  # 0, 1, 2 (72 hours)
+            forecast_date = target_date + timedelta(days=day_offset)
+
+            # Get base next-day prediction
+            day_predictions = self.predict_next_day(energy_df, stores_df, forecast_date)
+
+            for _, store_pred in day_predictions.iterrows():
+                base_prob = store_pred["blackout_probability"]
+
+                for window_label, window_hour in windows:
+                    # Adjust probability by time-of-day pattern
+                    # Peak blackout: 12:00-20:00 (afternoon/evening)
+                    if 12 <= window_hour <= 16:
+                        window_prob = base_prob * 1.3  # 30% more likely afternoon
+                    elif 16 <= window_hour <= 20:
+                        window_prob = base_prob * 1.1  # 10% more likely evening
+                    elif 0 <= window_hour <= 4:
+                        window_prob = base_prob * 0.5  # 50% less likely night
+                    elif 4 <= window_hour <= 8:
+                        window_prob = base_prob * 0.7  # 30% less likely early morning
+                    else:
+                        window_prob = base_prob * 0.9
+
+                    # Decay probability for further days (less certain)
+                    decay = 1.0 - (day_offset * 0.15)  # 15% less confident per day
+                    window_prob = np.clip(window_prob * decay, 0, 0.99)
+
+                    results.append({
+                        "store_id": store_pred["store_id"],
+                        "name": store_pred["name"],
+                        "township": store_pred["township"],
+                        "date": forecast_date,
+                        "day_offset": day_offset,
+                        "day_label": f"Day {day_offset + 1}" if day_offset > 0 else "Tomorrow",
+                        "window": window_label,
+                        "window_hour": window_hour,
+                        "probability": round(window_prob, 3),
+                        "risk_level": "HIGH" if window_prob >= 0.6 else ("MEDIUM" if window_prob >= 0.3 else "LOW"),
+                    })
+
+        return pd.DataFrame(results)
+
+    def detect_cascade(self, predictions_df: pd.DataFrame, threshold: float = 0.7,
+                        min_sites: int = 3) -> list:
+        """Detect blackout cascade: 3+ sites in same township above threshold (C4).
+
+        Returns:
+            list of cascade alerts
+        """
+        cascades = []
+        township_high = predictions_df[predictions_df["blackout_probability"] >= threshold]
+        township_counts = township_high.groupby("township")["store_id"].nunique()
+
+        for township, count in township_counts.items():
+            if count >= min_sites:
+                affected_stores = township_high[township_high["township"] == township]["name"].unique().tolist()
+                avg_prob = township_high[township_high["township"] == township]["blackout_probability"].mean()
+                cascades.append({
+                    "tier": 1,
+                    "type": "BLACKOUT_CASCADE",
+                    "township": township,
+                    "affected_stores": count,
+                    "store_names": affected_stores[:5],
+                    "avg_probability": round(avg_prob, 3),
+                    "message": (
+                        f"BLACKOUT CASCADE: {township} — {count} sites above {threshold*100:.0f}% threshold. "
+                        f"Affected: {', '.join(affected_stores[:3])}{'...' if len(affected_stores) > 3 else ''}. "
+                        f"Activate crisis protocol."
+                    ),
+                })
+
+        return cascades
+
     def get_township_risk_map(self, predictions_df: pd.DataFrame) -> pd.DataFrame:
         """Aggregate predictions to township level for heatmap."""
         return predictions_df.groupby("township").agg(

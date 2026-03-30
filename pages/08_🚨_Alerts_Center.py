@@ -19,6 +19,7 @@ from models.spoilage_predictor import SpoilagePredictor
 from utils.element_captions import get_page_captions, render_caption
 from utils.page_intelligence import render_page_intelligence
 from utils.smart_table import render_smart_table
+from utils.database import get_agent_decisions, get_agent_decision_stats
 
 st.set_page_config(page_title="Alerts Center", page_icon="🚨", layout="wide")
 
@@ -91,6 +92,36 @@ def collect_alerts():
         a["action"] = "Transfer perishable stock"
         all_alerts.append(a)
 
+    # C4: Blackout Cascade (3+ sites in township)
+    try:
+        cascades = bp.detect_cascade(pred)
+        for a in cascades:
+            a["source"] = "Blackout Cascade"
+            a["action"] = "Activate crisis protocol"
+            all_alerts.append(a)
+    except Exception:
+        pass
+
+    # C5: Solar Underperformance
+    try:
+        from models.solar_optimizer import SolarOptimizer
+        so = SolarOptimizer()
+        current_price = data["prices"]["diesel_price_mmk"].iloc[-1]
+        solar_results = so.optimize_all(data["stores"], data["solar"], data["energy"], current_price)
+        solar_sites = solar_results[solar_results["has_solar"] == True]
+        for _, site in solar_sites.iterrows():
+            if site.get("daily_solar_kwh", 0) > 0:
+                expected = site.get("solar_capacity_kw", 0) * 4.5
+                if expected > 0 and site["daily_solar_kwh"] < expected * 0.8:
+                    pct = site["daily_solar_kwh"] / expected * 100
+                    all_alerts.append({
+                        "tier": 2, "source": "Solar Performance",
+                        "message": f"Solar underperformance: {site.get('name', site['store_id'])} — {pct:.0f}% of expected output",
+                        "action": "Schedule panel inspection",
+                    })
+    except Exception:
+        pass
+
     # Deduplicate
     seen = set()
     unique = []
@@ -135,7 +166,7 @@ with cols[3]:
     render_caption("a_t3", captions)
 
 st.markdown("")
-tab = ui.tabs(options=["Critical", "Warning", "Info", "All Alerts"], default_value="Critical", key="alert_tabs")
+tab = ui.tabs(options=["Critical", "Warning", "Info", "All Alerts", "Agent Decisions"], default_value="Critical", key="alert_tabs")
 
 def render_alerts(alerts, color, label):
     if not alerts:
@@ -174,6 +205,62 @@ elif tab == "All Alerts":
         render_smart_table(df_show, key="all_alerts_table", title="Full Alert Log",
                            severity_col="Tier", max_height=500)
         render_caption("all_alerts_table", captions)
+
+elif tab == "Agent Decisions":
+    st.markdown("### AI Agent Decision Log")
+    st.markdown("""
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px 18px;margin-bottom:16px">
+        Audit trail of all AI agent decisions — what was recommended, which tools were used, confidence level.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Stats
+    agent_stats = get_agent_decision_stats()
+    st.markdown(f"**Total agent decisions: {agent_stats['total_decisions']}**")
+    if agent_stats["by_agent"]:
+        ag_cols = st.columns(len(agent_stats["by_agent"]))
+        for i, (agent, count) in enumerate(agent_stats["by_agent"].items()):
+            with ag_cols[i]:
+                ui.metric_card(title=agent, content=str(count), description="decisions", key=f"ag_{agent}")
+
+    # Filters
+    fc1, fc2 = st.columns(2)
+    with fc1:
+        filter_agent = st.selectbox("Filter by Agent", ["All"] + list(agent_stats.get("by_agent", {}).keys()),
+                                     key="filter_agent")
+    with fc2:
+        filter_limit = st.slider("Show last N decisions", 10, 100, 30, key="filter_limit")
+
+    agent_filter = filter_agent if filter_agent != "All" else None
+    decisions = get_agent_decisions(limit=filter_limit, agent_name=agent_filter)
+
+    if decisions:
+        dec_df = pd.DataFrame(decisions)
+        display_cols = ["agent_name", "decision_type", "store_id", "recommendation", "confidence",
+                        "tools_used", "model_used", "created_at"]
+        display_cols = [c for c in display_cols if c in dec_df.columns]
+        dec_display = dec_df[display_cols].copy()
+
+        # Format
+        if "confidence" in dec_display.columns:
+            dec_display["confidence"] = dec_display["confidence"].apply(
+                lambda v: f"{v:.0%}" if pd.notna(v) else "—")
+        if "tools_used" in dec_display.columns:
+            dec_display["tools_used"] = dec_display["tools_used"].apply(
+                lambda v: v[:60] + "..." if isinstance(v, str) and len(v) > 60 else (v or "—"))
+        if "recommendation" in dec_display.columns:
+            dec_display["recommendation"] = dec_display["recommendation"].apply(
+                lambda v: v[:80] + "..." if isinstance(v, str) and len(v) > 80 else (v or "—"))
+
+        col_names = {"agent_name": "Agent", "decision_type": "Type", "store_id": "Store",
+                     "recommendation": "Recommendation", "confidence": "Confidence",
+                     "tools_used": "Tools", "model_used": "Model", "created_at": "Timestamp"}
+        dec_display.columns = [col_names.get(c, c) for c in dec_display.columns]
+
+        render_smart_table(dec_display, key="agent_dec_table", title="Agent Decision Log",
+                           max_height=400)
+    else:
+        st.caption("No agent decisions logged yet. Decisions are recorded when agents run via scheduler or chat.")
 
 # ── Source Breakdown ──
 st.markdown("### Alerts by Source")

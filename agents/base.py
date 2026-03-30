@@ -73,6 +73,9 @@ class BaseAgent:
             tool_calls = message.get("tool_calls")
 
             if not tool_calls:
+                # Log agent decision to DB (F6)
+                self._log_decision(
+                    message.get("content", ""), tool_calls_made, model_used)
                 return AgentResult(
                     text=message.get("content", ""),
                     tool_calls_made=tool_calls_made,
@@ -109,7 +112,26 @@ class BaseAgent:
                     "content": result_str,
                 })
 
+        self._log_decision("Reached analysis limit", tool_calls_made, self.model)
         return AgentResult(
             text="Reached analysis limit. Here's what I found so far.",
             tool_calls_made=tool_calls_made,
             model_used=self.model, turns=turns, success=False)
+
+    def _log_decision(self, recommendation: str, tool_calls_made: list,
+                       model_used: str):
+        """Log agent decision to DB for audit trail (F6)."""
+        try:
+            from utils.database import save_agent_decision
+            tools_used = [tc["name"] for tc in tool_calls_made] if tool_calls_made else []
+            total_ms = sum(tc.get("duration_s", 0) * 1000 for tc in tool_calls_made)
+            save_agent_decision(
+                agent_name=self.name,
+                decision_type="response",
+                recommendation=recommendation[:500] if recommendation else "",
+                tools_used=tools_used,
+                model_used=model_used,
+                execution_time_ms=total_ms,
+            )
+        except Exception as e:
+            logger.debug(f"Failed to log agent decision: {e}")

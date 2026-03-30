@@ -66,12 +66,24 @@ def generate_diesel_prices_csv():
     oil_noise = np.random.normal(0, 3, NUM_DAYS)
     oil_prices = oil_base + oil_trend + oil_noise
 
+    # Regional shortage flag (NEW) — ~15% chance, higher during price shocks
+    shortage_flags = []
+    for i in range(NUM_DAYS):
+        if shocks[i] > 100:
+            shortage_flags.append("Y" if np.random.random() < 0.6 else "N")
+        else:
+            shortage_flags.append("Y" if np.random.random() < 0.08 else "N")
+
+    suppliers = ["Myanmar Petroleum", "Shwe Taung Fuel", "Golden Eagle Diesel", "Delta Fuel Supply"]
+
     df = pd.DataFrame({
         "date": dates,
         "diesel_price_mmk": np.round(prices, 0).astype(int),
         "fx_usd_mmk": np.round(fx_rates, 0).astype(int),
         "brent_oil_usd": np.round(oil_prices, 2),
         "price_change_pct": 0.0,
+        "regional_shortage_flag": shortage_flags,
+        "supplier_source": [np.random.choice(suppliers) for _ in range(NUM_DAYS)],
     })
     df["price_change_pct"] = df["diesel_price_mmk"].pct_change().fillna(0).round(4) * 100
 
@@ -136,6 +148,16 @@ def generate_daily_energy_csv(stores_df, prices_df):
             # Grid cost
             grid_cost = round(grid_hours * store["generator_kw"] * 0.5 * DIESEL["cost_per_kwh_grid"] / 1000 * 10, 0)
 
+            # Operating mode (NEW columns from management template)
+            op_mode = "FULL"  # Default — real data will have actual/planned from COMMANDER
+            if diesel_consumed > 0 and generator_hours > 4:
+                op_mode = np.random.choice(["FULL", "SELECTIVE", "REDUCED"], p=[0.7, 0.2, 0.1])
+
+            # Submission tracking (NEW columns)
+            submitters = ["U Aung Ko", "Ma Thida", "Ko Zaw", "Daw Su", "U Kyaw"]
+            sub_hour = np.random.choice([18, 19, 20, 21], p=[0.2, 0.4, 0.3, 0.1])
+            submitted_at = f"{date.strftime('%Y-%m-%d')} {sub_hour}:{'%02d' % np.random.randint(0,60)}:00"
+
             rows.append({
                 "date": date,
                 "store_id": store["store_id"],
@@ -147,6 +169,10 @@ def generate_daily_energy_csv(stores_df, prices_df):
                 "grid_cost_mmk": grid_cost,
                 "solar_kwh": solar_kwh,
                 "total_energy_cost_mmk": diesel_cost + grid_cost,
+                "operating_mode_actual": op_mode,
+                "operating_mode_planned": op_mode,
+                "submitted_by": np.random.choice(submitters),
+                "submitted_at": submitted_at,
             })
 
     df = pd.DataFrame(rows)
@@ -184,6 +210,20 @@ def generate_diesel_inventory_csv(stores_df):
 
             days_of_coverage = round(stock / max(daily_use, 0.1), 1)
 
+            # Supplier tracking (NEW columns from management template)
+            supplier_ids = ["SUP-001", "SUP-002", "SUP-003", "SUP-004"]
+            sup_id = ""
+            promised_date = ""
+            actual_date = ""
+            po_number = ""
+            if purchased > 0:
+                sup_id = np.random.choice(supplier_ids, p=[0.4, 0.3, 0.1, 0.2])
+                lead_days = max(1, int(lead_time))
+                promised_date = (date + pd.Timedelta(days=lead_days)).strftime("%Y-%m-%d")
+                delay = np.random.choice([0, 0, 0, 1, 2], p=[0.5, 0.2, 0.1, 0.1, 0.1])
+                actual_date = (date + pd.Timedelta(days=lead_days + delay)).strftime("%Y-%m-%d")
+                po_number = f"PO-{date.strftime('%Y')}-{np.random.randint(1000,9999)}"
+
             rows.append({
                 "date": date,
                 "store_id": store["store_id"],
@@ -192,6 +232,10 @@ def generate_diesel_inventory_csv(stores_df):
                 "tank_capacity_liters": tank_capacity,
                 "supplier_lead_time_days": lead_time,
                 "days_of_coverage": min(days_of_coverage, 30),
+                "supplier_id": sup_id,
+                "promised_delivery_date": promised_date,
+                "actual_delivery_date": actual_date,
+                "purchase_order_number": po_number,
             })
 
     df = pd.DataFrame(rows)
@@ -263,6 +307,11 @@ def generate_store_sales_csv(stores_df):
                 hourly_sales = round(daily_sales * weight * np.random.uniform(0.8, 1.2), 0)
                 gross_margin = round(hourly_sales * margin_rate * np.random.uniform(0.9, 1.1), 0)
 
+                # Labour cost (NEW column from management template)
+                from config.settings import LABOUR_COST_PER_HOUR
+                base_labour = LABOUR_COST_PER_HOUR.get(store["channel"], 15000)
+                labour_cost = round(base_labour * np.random.uniform(0.9, 1.1))
+
                 rows.append({
                     "date": date,
                     "hour": hour,
@@ -270,6 +319,7 @@ def generate_store_sales_csv(stores_df):
                     "sales_mmk": hourly_sales,
                     "gross_margin_mmk": gross_margin,
                     "transactions": max(1, int(hourly_sales / np.random.uniform(15000, 50000))),
+                    "labour_cost_mmk": labour_cost,
                 })
 
     df = pd.DataFrame(rows)
@@ -717,44 +767,32 @@ def main():
     print(f"Output: {SAMPLE_DATA_DIR}\n")
 
     # Generate in order (some depend on others)
-    print("1/12 Generating store master data...")
+    print("1/8 Generating store master data...")
     stores_df = generate_stores_csv()
 
-    print("2/12 Generating diesel prices...")
+    print("2/8 Generating diesel prices...")
     prices_df = generate_diesel_prices_csv()
 
-    print("3/12 Generating daily energy data...")
+    print("3/8 Generating daily energy data...")
     energy_df = generate_daily_energy_csv(stores_df, prices_df)
 
-    print("4/12 Generating diesel inventory...")
+    print("4/8 Generating diesel inventory...")
     inventory_df = generate_diesel_inventory_csv(stores_df)
 
-    print("5/12 Generating store sales (hourly)...")
+    print("5/8 Generating store sales (hourly)...")
     sales_df = generate_store_sales_csv(stores_df)
 
-    print("6/12 Generating solar generation (hourly)...")
+    print("6/8 Generating solar generation (hourly)...")
     solar_df = generate_solar_generation_csv(stores_df)
 
-    print("7/12 Generating temperature logs...")
+    print("7/8 Generating temperature logs...")
     temp_df = generate_temperature_logs_csv(stores_df)
 
-    print("8/12 Generating FX rates...")
+    print("8/8 Generating FX rates...")
     fx_df = generate_fx_rates_csv()
 
-    print("9/12 Generating supplier master...")
-    suppliers_df = generate_supplier_master_csv()
-
-    print("10/12 Generating diesel procurement (with supplier-specific pricing)...")
-    procurement_df = generate_diesel_procurement_csv(stores_df, prices_df, suppliers_df)
-
-    print("11/12 Generating diesel transfers...")
-    transfers_df = generate_diesel_transfers_csv(stores_df)
-
-    print("12/12 Generating generator maintenance...")
-    maintenance_df = generate_generator_maintenance_csv(stores_df)
-
     print("\n" + "=" * 60)
-    print("DONE! All 12 CSV files generated successfully.")
+    print("DONE! All 8 CSV files generated successfully.")
     print(f"Location: {SAMPLE_DATA_DIR}")
     print("=" * 60)
 

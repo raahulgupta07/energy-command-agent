@@ -181,14 +181,10 @@ with tc2:
                 <span style="display:inline-block;width:10px;height:10px;background:#00C853;border-radius:2px;margin-right:4px"></span>
                 <strong>2 Optional:</strong> solar_generation, temperature_logs
             </div>
-            <div>
-                <span style="display:inline-block;width:10px;height:10px;background:#7B1FA2;border-radius:2px;margin-right:4px"></span>
-                <strong>4 Procurement:</strong> supplier_master, diesel_procurement, diesel_transfers, generator_maintenance
-            </div>
         </div>
         <p style="margin:10px 0 0;font-size:0.82rem;color:#166534">
             <strong style="color:#00897b">NEW columns in teal:</strong>
-            operating modes, submission tracking, labour cost, shortage flag, supplier pricing tiers
+            operating modes, submission tracking, labour cost, shortage flag, supplier delivery dates
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -360,10 +356,6 @@ all_files = [
     ("fx_rates.csv", "Recommended", "#e65100"),
     ("solar_generation.csv", "Optional", "#1b5e20"),
     ("temperature_logs.csv", "Optional", "#1b5e20"),
-    ("supplier_master.csv", "Procurement", "#7b1fa2"),
-    ("diesel_procurement.csv", "Procurement", "#7b1fa2"),
-    ("diesel_transfers.csv", "Procurement", "#7b1fa2"),
-    ("generator_maintenance.csv", "Procurement", "#7b1fa2"),
 ]
 
 status_rows = []
@@ -792,209 +784,6 @@ file_status_badges("temperature_logs.csv")
 upload_widget("temperature_logs.csv",
     ["date", "hour", "store_id", "zone", "temperature_c", "target_temp_c",
      "critical_high_c", "critical_low_c", "is_breach"], "temp", "#4a148c")
-
-st.divider()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTION 8: SUPPLIER MASTER (PROCUREMENT — PURPLE)
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.markdown("""
-<div style="background:linear-gradient(135deg,#4a148c,#7b1fa2);color:white;padding:20px 24px;border-radius:12px;margin-bottom:8px">
-    <p class="section-title">8. Supplier Master Data <span class="section-badge" style="background:#e040fb;color:white">PROCUREMENT</span></p>
-    <p class="section-subtitle">supplier_master.csv — Registry of all diesel suppliers with pricing tiers, reliability ratings, and delivery terms.</p>
-    <div style="margin-top:10px">
-        <span class="model-chip">M10 Supplier Risk</span>
-        <span class="model-chip">Procurement Intelligence</span>
-        <span class="model-chip">Price Optimization</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-with st.expander("What is this file?", expanded=False):
-    st.markdown("""
-    Your supplier registry — one row per diesel supplier. Each supplier has different pricing:
-
-    **Pricing Model:**
-    - `price_markup_pct`: Supplier's typical markup vs market price (+2% = expensive, -1% = bulk discount)
-    - `bulk_discount_pct`: Extra discount for large orders above threshold
-    - This lets the AI compare: *"SUP-002 is 3% cheaper than SUP-003 for this order size"*
-
-    **How to collect:** Procurement team fills this once, updates quarterly or when suppliers change.
-    """)
-
-cols_info = pd.DataFrame([
-    {"Column": "supplier_id", "Type": "Text", "Example": "SUP-001", "Description": "Unique supplier ID. Used in procurement records."},
-    {"Column": "supplier_name", "Type": "Text", "Example": "Myanmar Petroleum Corp", "Description": "Company name."},
-    {"Column": "region", "Type": "Text", "Example": "Yangon Central", "Description": "Supplier's operating region."},
-    {"Column": "price_markup_pct", "Type": "Number", "Example": "2.0", "Description": "+2 = 2% above market, -1 = 1% below."},
-    {"Column": "bulk_discount_pct", "Type": "Number", "Example": "1.5", "Description": "Extra discount % for bulk orders."},
-    {"Column": "bulk_threshold_liters", "Type": "Number", "Example": "1000", "Description": "Order size above which bulk discount applies."},
-    {"Column": "avg_lead_time_days", "Type": "Number", "Example": "1.5", "Description": "Average delivery days."},
-    {"Column": "reliability_rating", "Type": "Text", "Example": "A", "Description": "A (>95% on-time) / B / C / D."},
-    {"Column": "payment_terms", "Type": "Text", "Example": "NET7", "Description": "COD / NET7 / NET14 / NET30 / PREPAID."},
-    {"Column": "emergency_available", "Type": "Boolean", "Example": "TRUE", "Description": "Can do same-day emergency delivery?"},
-])
-st.dataframe(cols_info, use_container_width=True, hide_index=True)
-file_status_badges("supplier_master.csv")
-upload_widget("supplier_master.csv",
-    ["supplier_id", "supplier_name", "region", "contact_person", "contact_phone",
-     "avg_lead_time_days", "price_markup_pct", "min_order_liters",
-     "bulk_discount_pct", "bulk_threshold_liters", "payment_terms",
-     "reliability_rating", "serves_sectors", "emergency_available", "notes"], "supplier", "#7b1fa2")
-
-st.divider()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTION 9: DIESEL PROCUREMENT (PROCUREMENT — PURPLE)
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.markdown("""
-<div style="background:linear-gradient(135deg,#4a148c,#7b1fa2);color:white;padding:20px 24px;border-radius:12px;margin-bottom:8px">
-    <p class="section-title">9. Diesel Purchase Orders <span class="section-badge" style="background:#e040fb;color:white">PROCUREMENT</span></p>
-    <p class="section-subtitle">diesel_procurement.csv — Every diesel purchase with actual price paid, supplier, delivery tracking, and AI recommendation flag.</p>
-    <div style="margin-top:10px">
-        <span class="model-chip">M10 Supplier Risk</span>
-        <span class="model-chip">Price Response Time KPI</span>
-        <span class="model-chip">Procurement Analytics</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-with st.expander("What is this file?", expanded=False):
-    st.markdown("""
-    Every diesel purchase order — this is where **actual prices** live (not market reference).
-
-    **Why separate from diesel_prices.csv?**
-    - `diesel_prices.csv` = market benchmark (same for everyone)
-    - `diesel_procurement.csv` = what you ACTUALLY paid (varies by supplier, volume, urgency)
-
-    **Key insight:** Emergency orders cost 5-8% more than market. Bulk buys save 1-3%.
-    The AI tracks this to recommend *when* and *from whom* to buy.
-
-    **How to collect:** Procurement team logs each PO. Can also import from SAP/ERP.
-    """)
-
-cols_info = pd.DataFrame([
-    {"Column": "po_number", "Type": "Text", "Example": "PO-2026-0342", "Description": "Unique purchase order number."},
-    {"Column": "po_date", "Type": "Date", "Example": "2026-03-14", "Description": "Date order was placed."},
-    {"Column": "supplier_id", "Type": "Text", "Example": "SUP-001", "Description": "Must match supplier_master."},
-    {"Column": "quantity_liters", "Type": "Number", "Example": "500", "Description": "Liters ordered."},
-    {"Column": "market_price_per_liter", "Type": "Number", "Example": "4850", "Description": "Market ref price on that date."},
-    {"Column": "actual_price_per_liter", "Type": "Number", "Example": "4947", "Description": "ACTUAL price paid (varies by supplier)."},
-    {"Column": "total_cost_mmk", "Type": "Number", "Example": "2473500", "Description": "quantity x actual_price."},
-    {"Column": "price_vs_market_pct", "Type": "Number", "Example": "2.0", "Description": "% above/below market price."},
-    {"Column": "delivery_location", "Type": "Text", "Example": "RH-001", "Description": "Store ID or CENTRAL-DEPOT."},
-    {"Column": "order_type", "Type": "Text", "Example": "SCHEDULED", "Description": "SCHEDULED / BULK_BUY / EMERGENCY / REALLOCATION."},
-    {"Column": "status", "Type": "Text", "Example": "DELIVERED", "Description": "ORDERED / IN_TRANSIT / DELIVERED / CANCELLED."},
-    {"Column": "ai_recommended", "Type": "Boolean", "Example": "TRUE", "Description": "Was this purchase recommended by AI?"},
-])
-st.dataframe(cols_info, use_container_width=True, hide_index=True)
-file_status_badges("diesel_procurement.csv")
-upload_widget("diesel_procurement.csv",
-    ["po_number", "po_date", "supplier_id", "ordered_by", "quantity_liters",
-     "market_price_per_liter", "actual_price_per_liter", "total_cost_mmk",
-     "price_vs_market_pct", "delivery_location", "promised_delivery_date",
-     "actual_delivery_date", "delivery_delay_days", "status", "order_type",
-     "ai_recommended", "notes"], "procurement", "#7b1fa2")
-
-st.divider()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTION 10: DIESEL TRANSFERS (PROCUREMENT — PURPLE)
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.markdown("""
-<div style="background:linear-gradient(135deg,#4a148c,#7b1fa2);color:white;padding:20px 24px;border-radius:12px;margin-bottom:8px">
-    <p class="section-title">10. Diesel Transfers <span class="section-badge" style="background:#e040fb;color:white">PROCUREMENT</span></p>
-    <p class="section-subtitle">diesel_transfers.csv — Fuel movement between depot and sites, or site-to-site reallocation during shortages.</p>
-    <div style="margin-top:10px">
-        <span class="model-chip">M6 Stock-Out Alert</span>
-        <span class="model-chip">Reallocation Engine</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-with st.expander("What is this file?", expanded=False):
-    st.markdown("""
-    Tracks every physical fuel movement:
-    - **SCHEDULED:** Routine depot → site deliveries
-    - **REALLOCATION:** Moving fuel from surplus site to deficit site (AI-recommended)
-    - **EMERGENCY:** Urgent transfers to prevent stockout
-
-    **How to collect:** Logistics team logs each transfer with from/to locations and authorization.
-    """)
-
-cols_info = pd.DataFrame([
-    {"Column": "transfer_id", "Type": "Text", "Example": "TRF-2026-0089", "Description": "Unique transfer ID."},
-    {"Column": "transfer_date", "Type": "Date", "Example": "2026-03-15", "Description": "Date of transfer."},
-    {"Column": "from_location", "Type": "Text", "Example": "CENTRAL-DEPOT", "Description": "Source: store_id or CENTRAL-DEPOT."},
-    {"Column": "to_location", "Type": "Text", "Example": "FB-001", "Description": "Destination store_id."},
-    {"Column": "quantity_liters", "Type": "Number", "Example": "100", "Description": "Liters transferred."},
-    {"Column": "reason", "Type": "Text", "Example": "REALLOCATION", "Description": "REALLOCATION / SCHEDULED / EMERGENCY."},
-    {"Column": "authorized_by", "Type": "Text", "Example": "Sector Lead - Retail", "Description": "Who approved the transfer."},
-    {"Column": "transport_cost_mmk", "Type": "Number", "Example": "25000", "Description": "Logistics cost (0 if internal)."},
-    {"Column": "status", "Type": "Text", "Example": "COMPLETED", "Description": "PENDING / IN_TRANSIT / COMPLETED / CANCELLED."},
-])
-st.dataframe(cols_info, use_container_width=True, hide_index=True)
-file_status_badges("diesel_transfers.csv")
-upload_widget("diesel_transfers.csv",
-    ["transfer_id", "transfer_date", "from_location", "to_location",
-     "quantity_liters", "reason", "authorized_by", "transport_cost_mmk",
-     "status", "linked_po", "notes"], "transfers", "#7b1fa2")
-
-st.divider()
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SECTION 11: GENERATOR MAINTENANCE (PROCUREMENT — PURPLE)
-# ══════════════════════════════════════════════════════════════════════════════
-
-st.markdown("""
-<div style="background:linear-gradient(135deg,#4a148c,#7b1fa2);color:white;padding:20px 24px;border-radius:12px;margin-bottom:8px">
-    <p class="section-title">11. Generator Maintenance Log <span class="section-badge" style="background:#e040fb;color:white">PROCUREMENT</span></p>
-    <p class="section-subtitle">generator_maintenance.csv — Service history, breakdowns, and scheduled maintenance for all generators.</p>
-    <div style="margin-top:10px">
-        <span class="model-chip">M9 BCP Engine</span>
-        <span class="model-chip">Asset Management</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-with st.expander("What is this file?", expanded=False):
-    st.markdown("""
-    Every generator maintenance event:
-    - **SCHEDULED:** Routine oil changes, filter replacements, service intervals
-    - **EMERGENCY:** Breakdowns, failures, urgent repairs
-    - **INSPECTION:** Check-ups, pre-monsoon readiness
-
-    Tracks downtime hours, costs, and next service dates. Feeds into BCP scoring (generator reliability).
-
-    **How to collect:** Facilities team logs each maintenance event with cost and parts.
-    """)
-
-cols_info = pd.DataFrame([
-    {"Column": "maintenance_id", "Type": "Text", "Example": "MNT-2026-0045", "Description": "Unique maintenance ID."},
-    {"Column": "date", "Type": "Date", "Example": "2026-03-10", "Description": "Date of maintenance."},
-    {"Column": "store_id", "Type": "Text", "Example": "RH-001", "Description": "Must match stores.csv."},
-    {"Column": "maintenance_type", "Type": "Text", "Example": "SCHEDULED", "Description": "SCHEDULED / EMERGENCY / INSPECTION."},
-    {"Column": "description", "Type": "Text", "Example": "Oil change + filter", "Description": "What was done."},
-    {"Column": "downtime_hours", "Type": "Number", "Example": "2.0", "Description": "Hours generator was unavailable."},
-    {"Column": "cost_mmk", "Type": "Number", "Example": "350000", "Description": "Total cost (parts + labour)."},
-    {"Column": "parts_replaced", "Type": "Text", "Example": "Oil filter, Engine oil", "Description": "Parts replaced (comma-separated)."},
-    {"Column": "next_service_date", "Type": "Date", "Example": "2026-06-10", "Description": "Next scheduled service date."},
-    {"Column": "generator_hours_at_service", "Type": "Number", "Example": "4520", "Description": "Hour meter reading at service."},
-    {"Column": "status", "Type": "Text", "Example": "COMPLETED", "Description": "COMPLETED / IN_PROGRESS / SCHEDULED."},
-])
-st.dataframe(cols_info, use_container_width=True, hide_index=True)
-file_status_badges("generator_maintenance.csv")
-upload_widget("generator_maintenance.csv",
-    ["maintenance_id", "date", "store_id", "maintenance_type", "description",
-     "downtime_hours", "cost_mmk", "parts_replaced", "next_service_date",
-     "technician", "generator_hours_at_service", "status"], "maintenance", "#7b1fa2")
 
 st.divider()
 

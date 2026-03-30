@@ -208,6 +208,122 @@ class SolarOptimizer:
         result["rank"] = range(1, len(result) + 1)
         return result
 
+    def generate_hourly_schedule(self, store: dict, solar_df: pd.DataFrame,
+                                   energy_df: pd.DataFrame,
+                                   blackout_predictions: pd.DataFrame = None,
+                                   diesel_price: float = 3000) -> list:
+        """Generate hour-by-hour operating schedule for a solar store (E1).
+
+        Shifts energy-intensive operations to solar peak, reduces load post-peak.
+        Returns list of 16 hourly slots (6am-10pm) with mode + energy source.
+
+        Example from doc:
+          09:00-15:00: FULL (solar primary) — near-zero energy cost
+          15:00-19:00: SELECTIVE (grid reducing, prepare for blackout)
+          19:00-22:00: CRITICAL (generator if blackout, reduced load)
+        """
+        sid = store["store_id"]
+        if not store["has_solar"]:
+            return []
+
+        # Get solar pattern
+        store_solar = solar_df[solar_df["store_id"] == sid] if len(solar_df) > 0 else pd.DataFrame()
+        hourly_solar = store_solar.groupby("hour")["solar_kwh"].mean().to_dict() if len(store_solar) > 0 else {}
+
+        # Peak solar threshold
+        max_solar = max(hourly_solar.values(), default=0)
+        peak_threshold = max_solar * 0.5
+
+        # Blackout probability
+        blackout_prob = 0.5
+        if blackout_predictions is not None and len(blackout_predictions) > 0:
+            bp = blackout_predictions[blackout_predictions["store_id"] == sid]
+            if len(bp) > 0:
+                blackout_prob = bp["blackout_probability"].values[0]
+
+        # Build hourly schedule
+        schedule = []
+        total_diesel_saved = 0
+        total_diesel_unoptimized = 0
+
+        for hour in range(6, 22):
+            solar_kwh = hourly_solar.get(hour, 0)
+            is_solar_peak = solar_kwh >= peak_threshold and solar_kwh > 0
+
+            # Determine mode based on solar + blackout risk
+            if is_solar_peak:
+                mode = "FULL"
+                energy_source = "Solar (primary) + Grid (backup)"
+                energy_cost = 0  # Near-zero during solar
+                diesel_liters = 0
+            elif hour < 18 and solar_kwh > 0:
+                mode = "FULL"
+                energy_source = "Solar (partial) + Grid"
+                energy_cost = DIESEL["cost_per_kwh_grid"] * store["generator_kw"] * 0.3
+                diesel_liters = 0
+            elif blackout_prob >= 0.7 and hour >= 17:
+                mode = "CRITICAL"
+                energy_source = "Generator (if blackout) — minimal load"
+                diesel_liters = store["generator_kw"] * DIESEL["consumption_per_kwh"] * 0.3 / 1000
+                energy_cost = diesel_liters * diesel_price
+            elif blackout_prob >= 0.5 and hour >= 15:
+                mode = "SELECTIVE"
+                energy_source = "Grid (reducing) — prepare for blackout"
+                diesel_liters = 0
+                energy_cost = DIESEL["cost_per_kwh_grid"] * store["generator_kw"] * 0.4
+            else:
+                mode = "FULL"
+                energy_source = "Grid"
+                diesel_liters = 0
+                energy_cost = DIESEL["cost_per_kwh_grid"] * store["generator_kw"] * 0.5
+
+            # Unoptimized baseline: run generator all blackout hours at full load
+            unoptimized_diesel = store["generator_kw"] * DIESEL["consumption_per_kwh"] * 0.8 / 1000 if blackout_prob > 0.3 and hour >= 14 else 0
+
+            total_diesel_saved += (unoptimized_diesel - diesel_liters)
+            total_diesel_unoptimized += unoptimized_diesel
+
+            schedule.append({
+                "hour": hour,
+                "time_label": f"{hour:02d}:00",
+                "mode": mode,
+                "energy_source": energy_source,
+                "solar_kwh": round(solar_kwh, 1),
+                "diesel_liters": round(diesel_liters, 2),
+                "energy_cost_mmk": round(energy_cost, 0),
+            })
+
+        # Add summary to first entry
+        if schedule:
+            diesel_saving_mmk = round(total_diesel_saved * diesel_price, 0)
+            schedule[0]["_summary"] = {
+                "total_diesel_saved_liters": round(total_diesel_saved, 1),
+                "diesel_saving_mmk": diesel_saving_mmk,
+                "solar_peak_hours": [h for h, kwh in hourly_solar.items() if kwh >= peak_threshold],
+            }
+
+        return schedule
+
+    def generate_all_schedules(self, stores_df: pd.DataFrame, solar_df: pd.DataFrame,
+                                energy_df: pd.DataFrame, diesel_price: float,
+                                blackout_predictions: pd.DataFrame = None) -> dict:
+        """Generate hourly schedules for all solar stores.
+
+        Returns:
+            dict: {store_id: [schedule_list]}
+        """
+        schedules = {}
+        solar_stores = stores_df[stores_df["has_solar"] == True]
+
+        for _, store in solar_stores.iterrows():
+            schedule = self.generate_hourly_schedule(
+                store, solar_df, energy_df, blackout_predictions, diesel_price
+            )
+            if schedule:
+                schedules[store["store_id"]] = schedule
+
+        return schedules
+
     def get_network_summary(self) -> dict:
         """Summary stats for solar across the network."""
         if self.results is None:

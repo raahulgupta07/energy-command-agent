@@ -13,9 +13,24 @@ from pathlib import Path
 from contextlib import contextmanager
 
 _data_dir = Path(__file__).parent.parent / "data"
+
+# Try data/db/ first (Docker volume mount), fall back to data/ if not writable
 _db_dir = _data_dir / "db"
-_db_dir.mkdir(parents=True, exist_ok=True)
-DB_PATH = _db_dir / "eis.db"
+try:
+    _db_dir.mkdir(parents=True, exist_ok=True)
+    # Test if writable
+    _test_file = _db_dir / ".write_test"
+    _test_file.touch()
+    _test_file.unlink()
+    DB_PATH = _db_dir / "eis.db"
+except (PermissionError, OSError):
+    # Fallback: use data/ directly (works when volume mount fails)
+    try:
+        _data_dir.mkdir(parents=True, exist_ok=True)
+        DB_PATH = _data_dir / "eis.db"
+    except (PermissionError, OSError):
+        # Last resort: use /tmp
+        DB_PATH = Path("/tmp") / "eis.db"
 
 
 @contextmanager
@@ -140,6 +155,60 @@ def init_db():
                 model_used TEXT,
                 generated_at TEXT DEFAULT (datetime('now')),
                 UNIQUE(page_id, data_hash)
+            );
+
+            CREATE TABLE IF NOT EXISTS decision_audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT NOT NULL,
+                store_name TEXT,
+                date TEXT NOT NULL,
+                ai_recommended_mode TEXT NOT NULL,
+                final_mode TEXT NOT NULL,
+                was_overridden INTEGER DEFAULT 0,
+                decided_by TEXT,
+                override_reason TEXT,
+                sector TEXT,
+                channel TEXT,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS recommendation_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT,
+                rec_type TEXT NOT NULL,
+                recommendation TEXT NOT NULL,
+                accepted INTEGER DEFAULT 1,
+                override_reason TEXT,
+                action_timestamp TEXT,
+                response_time_hours REAL,
+                source TEXT DEFAULT 'COMMANDER',
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS data_quality_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                store_id TEXT NOT NULL,
+                store_name TEXT,
+                date TEXT NOT NULL,
+                completeness_pct REAL DEFAULT 100,
+                issues_json TEXT,
+                submitted_by TEXT,
+                submitted_at TEXT,
+                is_late INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS agent_decision_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agent_name TEXT NOT NULL,
+                decision_type TEXT NOT NULL,
+                store_id TEXT,
+                recommendation TEXT,
+                confidence REAL,
+                tools_used TEXT,
+                model_used TEXT,
+                execution_time_ms REAL,
+                created_at TEXT DEFAULT (datetime('now'))
             );
 
             CREATE TABLE IF NOT EXISTS saved_scenarios (
@@ -386,7 +455,9 @@ def get_db_stats() -> dict:
     """Get database statistics."""
     with get_db() as conn:
         stats = {}
-        for table in ["training_runs", "upload_history", "chat_messages", "insights_cache", "activity_log"]:
+        for table in ["training_runs", "upload_history", "chat_messages", "insights_cache",
+                      "activity_log", "decision_audit_log", "recommendation_tracking",
+                      "data_quality_log", "agent_decision_log"]:
             count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             stats[table] = count
         stats["db_size_kb"] = round(DB_PATH.stat().st_size / 1024, 1) if DB_PATH.exists() else 0
@@ -507,6 +578,228 @@ def get_drills(limit=50):
 def delete_drill(drill_id):
     with get_db() as conn:
         conn.execute("DELETE FROM bcp_drills WHERE id = ?", (drill_id,))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DECISION AUDIT LOG (F1, B4, B5)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_decision_audit(store_id, store_name, date, ai_mode, final_mode,
+                        decided_by="", override_reason="", sector="", channel=""):
+    """Log an AI decision vs actual outcome. Called when manager confirms/overrides."""
+    with get_db() as conn:
+        return conn.execute(
+            """INSERT INTO decision_audit_log (store_id, store_name, date,
+               ai_recommended_mode, final_mode, was_overridden, decided_by,
+               override_reason, sector, channel)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (store_id, store_name, date, ai_mode, final_mode,
+             1 if ai_mode != final_mode else 0,
+             decided_by, override_reason, sector, channel)
+        ).lastrowid
+
+
+def get_decision_audit(limit=100, store_id=None, date=None):
+    """Get decision audit log, newest first. Optionally filter by store or date."""
+    with get_db() as conn:
+        query = "SELECT * FROM decision_audit_log WHERE 1=1"
+        params = []
+        if store_id:
+            query += " AND store_id = ?"
+            params.append(store_id)
+        if date:
+            query += " AND date = ?"
+            params.append(date)
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_override_stats():
+    """Get override statistics for adoption tracking."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM decision_audit_log").fetchone()[0]
+        overridden = conn.execute("SELECT COUNT(*) FROM decision_audit_log WHERE was_overridden = 1").fetchone()[0]
+        if total == 0:
+            return {"total": 0, "overridden": 0, "accepted": 0, "adoption_rate_pct": 0}
+        return {
+            "total": total,
+            "overridden": overridden,
+            "accepted": total - overridden,
+            "adoption_rate_pct": round((total - overridden) / total * 100, 1),
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RECOMMENDATION TRACKING (F2, F3, F5)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_recommendation(store_id, rec_type, recommendation, accepted=True,
+                        override_reason="", action_timestamp=None,
+                        response_time_hours=None, source="COMMANDER"):
+    """Track an AI recommendation and whether it was followed."""
+    with get_db() as conn:
+        return conn.execute(
+            """INSERT INTO recommendation_tracking (store_id, rec_type, recommendation,
+               accepted, override_reason, action_timestamp, response_time_hours, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (store_id, rec_type, recommendation, 1 if accepted else 0,
+             override_reason, action_timestamp, response_time_hours, source)
+        ).lastrowid
+
+
+def get_recommendations(limit=100, rec_type=None):
+    """Get recommendations, newest first."""
+    with get_db() as conn:
+        if rec_type:
+            rows = conn.execute(
+                "SELECT * FROM recommendation_tracking WHERE rec_type = ? ORDER BY id DESC LIMIT ?",
+                (rec_type, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM recommendation_tracking ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_adoption_rate(rec_type=None):
+    """Get recommendation adoption rate. Optionally filter by type."""
+    with get_db() as conn:
+        where = "WHERE rec_type = ?" if rec_type else ""
+        params = (rec_type,) if rec_type else ()
+        total = conn.execute(f"SELECT COUNT(*) FROM recommendation_tracking {where}", params).fetchone()[0]
+        accepted = conn.execute(f"SELECT COUNT(*) FROM recommendation_tracking {where} {'AND' if where else 'WHERE'} accepted = 1", params).fetchone()[0]
+        if total == 0:
+            return {"total": 0, "accepted": 0, "rejected": 0, "adoption_rate_pct": 0}
+        return {
+            "total": total,
+            "accepted": accepted,
+            "rejected": total - accepted,
+            "adoption_rate_pct": round(accepted / total * 100, 1),
+        }
+
+
+def get_avg_response_time(rec_type=None):
+    """Get average response time in hours for recommendations that have action timestamps."""
+    with get_db() as conn:
+        where = "WHERE response_time_hours IS NOT NULL"
+        params = ()
+        if rec_type:
+            where += " AND rec_type = ?"
+            params = (rec_type,)
+        row = conn.execute(
+            f"SELECT AVG(response_time_hours), MIN(response_time_hours), MAX(response_time_hours) FROM recommendation_tracking {where}",
+            params
+        ).fetchone()
+        return {
+            "avg_hours": round(row[0], 1) if row[0] else None,
+            "min_hours": round(row[1], 1) if row[1] else None,
+            "max_hours": round(row[2], 1) if row[2] else None,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA QUALITY LOG (F4, G3)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_quality_log(store_id, store_name, date, completeness_pct=100,
+                     issues=None, submitted_by="", submitted_at=None, is_late=False):
+    """Log data quality for a store's daily submission."""
+    with get_db() as conn:
+        return conn.execute(
+            """INSERT INTO data_quality_log (store_id, store_name, date, completeness_pct,
+               issues_json, submitted_by, submitted_at, is_late)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (store_id, store_name, date, completeness_pct,
+             json.dumps(issues) if issues else None,
+             submitted_by, submitted_at, 1 if is_late else 0)
+        ).lastrowid
+
+
+def get_quality_report(limit=100, store_id=None):
+    """Get data quality log, newest first."""
+    with get_db() as conn:
+        if store_id:
+            rows = conn.execute(
+                "SELECT * FROM data_quality_log WHERE store_id = ? ORDER BY id DESC LIMIT ?",
+                (store_id, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM data_quality_log ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_compliance_summary():
+    """Get network-wide data submission compliance stats."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM data_quality_log").fetchone()[0]
+        if total == 0:
+            return {"total_submissions": 0, "avg_completeness": 0, "late_count": 0, "compliance_pct": 0, "stores_below_90": 0}
+        avg_comp = conn.execute("SELECT AVG(completeness_pct) FROM data_quality_log").fetchone()[0]
+        late = conn.execute("SELECT COUNT(*) FROM data_quality_log WHERE is_late = 1").fetchone()[0]
+        below_90 = conn.execute(
+            "SELECT COUNT(DISTINCT store_id) FROM data_quality_log WHERE completeness_pct < 90"
+        ).fetchone()[0]
+        return {
+            "total_submissions": total,
+            "avg_completeness": round(avg_comp, 1) if avg_comp else 0,
+            "late_count": late,
+            "compliance_pct": round((total - late) / total * 100, 1) if total else 0,
+            "stores_below_90": below_90,
+        }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AGENT DECISION LOG (F6)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_agent_decision(agent_name, decision_type, store_id=None, recommendation="",
+                        confidence=None, tools_used=None, model_used="",
+                        execution_time_ms=None):
+    """Log an AI agent's decision for audit trail."""
+    with get_db() as conn:
+        return conn.execute(
+            """INSERT INTO agent_decision_log (agent_name, decision_type, store_id,
+               recommendation, confidence, tools_used, model_used, execution_time_ms)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (agent_name, decision_type, store_id, recommendation, confidence,
+             json.dumps(tools_used) if tools_used else None,
+             model_used, execution_time_ms)
+        ).lastrowid
+
+
+def get_agent_decisions(limit=100, agent_name=None, store_id=None):
+    """Get agent decisions, newest first. Optionally filter."""
+    with get_db() as conn:
+        query = "SELECT * FROM agent_decision_log WHERE 1=1"
+        params = []
+        if agent_name:
+            query += " AND agent_name = ?"
+            params.append(agent_name)
+        if store_id:
+            query += " AND store_id = ?"
+            params.append(store_id)
+        query += " ORDER BY id DESC LIMIT ?"
+        params.append(limit)
+        rows = conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_agent_decision_stats():
+    """Get stats on agent decisions."""
+    with get_db() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM agent_decision_log").fetchone()[0]
+        by_agent = conn.execute(
+            "SELECT agent_name, COUNT(*) as cnt FROM agent_decision_log GROUP BY agent_name"
+        ).fetchall()
+        return {
+            "total_decisions": total,
+            "by_agent": {r["agent_name"]: r["cnt"] for r in by_agent},
+        }
 
 
 def clear_intelligence_cache():

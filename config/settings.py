@@ -190,6 +190,12 @@ OPERATING_MODES = {
         "load_pct": 1.0,
         "description": "All systems on, normal operations",
     },
+    "SELECTIVE": {
+        "label": "Selective Operation",
+        "color": "#2196F3",          # Blue
+        "load_pct": 0.65,
+        "description": "Food, cold chain, essential sales only. Generator at 60-70% load.",
+    },
     "REDUCED": {
         "label": "Reduced Operation",
         "color": "#FF9800",          # Orange
@@ -207,6 +213,176 @@ OPERATING_MODES = {
         "color": "#9E9E9E",          # Grey
         "load_pct": 0.0,
         "description": "Shutdown, secure perishables",
+    },
+}
+
+
+# ── Labour Cost Per Hour by Channel (MMK) ────────────────────────────────────
+# Used for EBITDA per operating hour calculation (B2)
+# Includes all staff costs: wages, overtime, social security
+LABOUR_COST_PER_HOUR = {
+    "Hypermarket": 45000,
+    "Supermarket": 25000,
+    "Convenience": 8000,
+    "Bakery": 20000,
+    "Restaurant": 18000,
+    "Beverage": 12000,
+    "QSR": 15000,
+    "Warehouse": 10000,
+    "Cold Chain": 12000,
+    "Logistics": 10000,
+    "Office": 12000,
+    "Mall": 35000,
+    "Industrial Park": 8000,
+}
+
+
+# ── Sector-Specific Decision Rules (B3) ──────────────────────────────────────
+# Per-channel rules that override default decision engine logic
+SECTOR_RULES = {
+    "Hypermarket": {
+        "never_auto_close": True,        # Anchor stores — never auto-CLOSE, only REDUCED max
+        "min_mode": "REDUCED",           # Lowest allowed mode
+        "alert_holdings_before_shutdown": True,
+        "critical_metric": "cold_chain_uptime_pct",
+    },
+    "Supermarket": {
+        "never_auto_close": False,
+        "min_mode": "CRITICAL",
+        "selective_by_profitability": True,  # COMMANDER decides by profitability score
+        "critical_metric": "ebitda_per_generator_hour",
+    },
+    "Convenience": {
+        "auto_close_below_breakeven": True,  # Auto-CLOSE when EBITDA/hr < 0
+        "fast_recovery": True,               # Fastest format to reopen
+        "critical_metric": "diesel_cost_pct_of_sales",
+    },
+    "Bakery": {
+        "shift_to_solar_window": True,     # Shift production to solar peak hours
+        "defer_non_peak_baking": True,     # Reduce/defer non-peak production
+        "critical_metric": "production_cost_per_unit",
+    },
+    "Restaurant": {
+        "reduce_menu_in_generator_mode": True,  # Close hot kitchen, keep cold beverages
+        "maintain_cold_beverages": True,
+        "critical_metric": "covers_per_hour",
+    },
+    "QSR": {
+        "reduce_menu_in_generator_mode": True,
+        "maintain_cold_beverages": True,
+        "critical_metric": "covers_per_hour",
+    },
+    "Beverage": {
+        "reduce_menu_in_generator_mode": True,
+        "critical_metric": "covers_per_hour",
+    },
+    "Warehouse": {
+        "pre_cool_buffer": True,           # Pre-cool before predicted blackout
+        "cold_chain_non_negotiable": True,  # Cold chain must stay on
+        "calculate_thermal_tolerance": True,
+        "min_mode": "CRITICAL",
+        "critical_metric": "cold_chain_breach_risk",
+    },
+    "Cold Chain": {
+        "pre_cool_buffer": True,
+        "cold_chain_non_negotiable": True,
+        "calculate_thermal_tolerance": True,
+        "min_mode": "CRITICAL",
+        "critical_metric": "cold_chain_breach_risk",
+    },
+    "Logistics": {
+        "pre_cool_buffer": True,
+        "critical_metric": "cold_chain_breach_risk",
+    },
+    "Office": {
+        "aggressive_hvac_reduction": True,  # Reduce HVAC and lighting aggressively
+        "remote_work_protocol": True,       # Enable remote work when in REDUCED+
+        "critical_metric": "energy_cost_per_sqft",
+    },
+    "Mall": {
+        "never_auto_close": True,          # Anchor property
+        "min_mode": "SELECTIVE",
+        "reduce_hvac_lighting": True,
+        "critical_metric": "energy_cost_per_sqft",
+    },
+    "Industrial Park": {
+        "aggressive_hvac_reduction": True,
+        "remote_work_protocol": True,
+        "critical_metric": "energy_cost_per_sqft",
+    },
+}
+
+
+# ── Decision Rights Matrix (B6, F7) ──────────────────────────────────────────
+# Who can approve what. Levels: COMMANDER (auto), Site Manager, Sector Lead, Holdings GECC, CFO/CEO
+DECISION_RIGHTS = {
+    "assign_daily_mode": {
+        "auto": "COMMANDER recommends",
+        "site_manager": "Confirm or Override",
+        "sector_lead": "Override",
+        "holdings": None,
+        "cfo": None,
+    },
+    "emergency_diesel_reallocation": {
+        "auto": "SENTINEL flags",
+        "site_manager": "Request",
+        "sector_lead": "Approve (< 5 days coverage)",
+        "holdings": "Approve (> 5 days coverage)",
+        "cfo": None,
+    },
+    "emergency_supplier_sourcing": {
+        "auto": "SENTINEL alerts",
+        "site_manager": None,
+        "sector_lead": "Initiate",
+        "holdings": "Approve spend",
+        "cfo": "Escalate crisis",
+    },
+    "bulk_diesel_purchase": {
+        "auto": "COMMANDER recommends timing + qty",
+        "site_manager": None,
+        "sector_lead": "Propose",
+        "holdings": "Approve",
+        "cfo": "If above threshold",
+    },
+    "site_temporary_closure": {
+        "auto": "COMMANDER recommends",
+        "site_manager": "Confirm",
+        "sector_lead": "Approve",
+        "holdings": "Ratify strategic sites",
+        "cfo": None,
+    },
+    "solar_capex_approval": {
+        "auto": None,
+        "site_manager": None,
+        "sector_lead": "Propose",
+        "holdings": "Recommend",
+        "cfo": "Approve",
+    },
+    "crisis_protocol_activation": {
+        "auto": "SENTINEL triggers alert",
+        "site_manager": None,
+        "sector_lead": "Sector protocol",
+        "holdings": "Group protocol",
+        "cfo": "Board notification",
+    },
+}
+
+
+# ── Email Configuration (H1-H6) ──────────────────────────────────────────────
+# All secrets from environment variables — never hardcoded
+EMAIL_CONFIG = {
+    "smtp_server": os.environ.get("EIS_SMTP_SERVER", "smtp.office365.com"),
+    "smtp_port": int(os.environ.get("EIS_SMTP_PORT", "587")),
+    "sender": os.environ.get("EIS_SMTP_USER", ""),
+    "password": os.environ.get("EIS_SMTP_PASSWORD", ""),
+    "enabled": bool(os.environ.get("EIS_SMTP_USER", "")),
+    "recipients": {
+        "sector_leads": [],    # Fill with actual emails
+        "holdings_gecc": [],
+        "cfo": [],
+        "procurement": [],
+        "facilities": [],
+        "all_managers": [],
     },
 }
 

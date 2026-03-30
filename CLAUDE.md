@@ -251,7 +251,7 @@ Level 4: No API key       (Pure rule-based — everything still works)
 
 ---
 
-## Data Files (12 CSVs)
+## Data Files (8 CSVs — Management Approved Template)
 
 | File | Rows | Priority | Description |
 |------|------|----------|-------------|
@@ -263,21 +263,29 @@ Level 4: No API key       (Pure rule-based — everything still works)
 | `store_sales.csv` | 158,400 | Recommended | Hourly sales and margin per store |
 | `solar_generation.csv` | 24,300 | Optional | Hourly solar output for 15 solar-equipped sites |
 | `temperature_logs.csv` | 69,120 | Optional | Cold chain temperature readings for 32 sites |
-| `supplier_master.csv` | 4 | Procurement | Supplier registry: pricing tiers, reliability, payment terms |
-| `diesel_procurement.csv` | ~986 | Procurement | Purchase orders with actual supplier-specific pricing |
-| `diesel_transfers.csv` | ~114 | Procurement | Inter-site fuel transfers and depot-to-site movements |
-| `generator_maintenance.csv` | ~111 | Procurement | Generator service history and maintenance schedule |
 
-### Diesel Pricing Model
-```
-diesel_prices.csv = Market benchmark price (same for everyone)
-supplier_master.csv = Each supplier has price_markup_pct (+2%, -1%, +5%)
-diesel_procurement.csv = Actual price per PO = market x markup ± bulk discount ± emergency premium
-```
+### NEW Columns (11 — added to existing CSVs)
+- `daily_energy`: `operating_mode_actual`, `operating_mode_planned`, `submitted_by`, `submitted_at`
+- `diesel_prices`: `regional_shortage_flag`, `supplier_source`
+- `diesel_inventory`: `supplier_id`, `promised_delivery_date`, `actual_delivery_date`, `purchase_order_number`
+- `store_sales`: `labour_cost_mmk`
+
+### Key Additions Since v1.0
+- **15 KPIs** (8 original + 7 new: EBITDA/hr, Generator EBITDA, Cold Chain Uptime, Solar Offset, Compliance, Adoption, Response Time)
+- **5 operating modes**: FULL, SELECTIVE, REDUCED, CRITICAL, CLOSE
+- **13 sector-specific rules** (Hypermarket never close, Convenience auto-close, Bakery solar shift, etc.)
+- **Decision audit trail** with override/confirm UI
+- **Scheduled jobs**: SENTINEL every 30min, ORACLE 6AM, COMMANDER 7AM, mid-day 12PM
+- **Email reports** via Outlook: daily brief, weekly EBITDA, weekly risk, monthly resilience, crisis
+- **Data quality engine**: validation rules, submission compliance, missing store detection
+- **25 agent tools** (19 original + 6 new)
+- **Pre-cooling logic**: thermal tolerance calculation, pre-cool recommendations
+- **72-hour blackout forecast** in 4-hour windows with cascade detection
+- **Supplier reliability scoring** from delivery dates
 
 **Storage:** `data/sample/` (synthetic) or `data/real/` (uploaded). Toggle via Data Upload page.
 
-**Master Data Template:** Downloadable Excel workbook (13 sheets) with all column definitions, sample data, and dropdown validations. Available on the Data Upload page.
+**Master Data Template:** Downloadable Excel workbook (9 sheets) with column definitions, sample data, and dropdown validations. Available on the Data Upload page.
 
 ---
 
@@ -293,6 +301,8 @@ energy-intelligence-system/
 ├── requirements.txt                    # Python dependencies (pinned versions)
 ├── Dockerfile                          # Container build (non-root user)
 ├── docker-compose.yml                  # Container orchestration (env from .env)
+├── scheduler.py                        # APScheduler: SENTINEL/ORACLE/COMMANDER cadence
+├── entrypoint.sh                       # Docker entrypoint (fixes volume permissions)
 ├── .dockerignore                       # Docker build exclusions
 ├── config/
 │   └── settings.py                     # Sectors, stores, thresholds, AGENT_CONFIG
@@ -328,13 +338,16 @@ energy-intelligence-system/
     ├── database.py                     # SQLite: 10 tables, all CRUD ops
     ├── element_captions.py             # AI captions per chart/table/card (DB-persisted)
     ├── insight_engine.py               # Rule-based + LLM insight generator
-    ├── kpi_calculator.py               # 8 shared KPI formulas
+    ├── kpi_calculator.py               # 15 shared KPI formulas (8 original + 7 new)
     ├── llm_client.py                   # OpenRouter (env var, no hardcoded keys)
     ├── mermaid_helper.py               # Mermaid diagrams with zoom/pan
     ├── page_insights.py                # Legacy insights widget
     ├── page_intelligence.py            # AI page intelligence (4-type analysis, DB-persisted)
     ├── smart_table.py                  # Enhanced HTML tables with severity badges
-    └── template_generator.py           # Master Excel template (13 sheets, formatted)
+    ├── template_generator.py           # Master Excel template (9 sheets, formatted)
+    ├── email_alerts.py                 # Outlook SMTP email + HTML templates
+    ├── report_generator.py             # 5 packaged HTML reports for email
+    └── data_quality.py                 # Validation rules, compliance scoring
 ```
 
 ---

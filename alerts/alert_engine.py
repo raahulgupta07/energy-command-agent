@@ -66,6 +66,7 @@ class AlertEngine:
         self._run_stockout_alert()
         self._run_spoilage_predictor()
         self._run_holdings_aggregator()
+        self._run_additional_alerts()  # C4, C5, C6 — cascade, solar, generator
 
         # Deduplicate by message
         seen = set()
@@ -211,6 +212,64 @@ class AlertEngine:
         self.results["group_kpis"] = group_kpis
         self.results["sector_kpis"] = sector_kpis
 
+    def _run_additional_alerts(self):
+        """Additional alert types: cascade, solar underperformance, generator inefficiency (C4-C6)."""
+
+        # C4: Blackout Cascade — 3+ sites in township above threshold
+        blackout_preds = self.results.get("blackout_predictions")
+        if blackout_preds is not None and len(blackout_preds) > 0:
+            blackout_model = self.models.get("blackout")
+            if blackout_model and hasattr(blackout_model, "detect_cascade"):
+                cascades = blackout_model.detect_cascade(blackout_preds)
+                for alert in cascades:
+                    alert["source"] = "Blackout Cascade Detection"
+                    alert["action"] = "Activate crisis protocol for affected township"
+                    alert["timestamp"] = self.run_timestamp
+                    self.alerts.append(alert)
+
+        # C5: Solar Underperformance — actual < 80% of expected
+        solar_results = self.results.get("solar_optimization")
+        if solar_results is not None and len(solar_results) > 0:
+            solar_sites = solar_results[solar_results["has_solar"] == True]
+            for _, site in solar_sites.iterrows():
+                if site.get("daily_solar_kwh", 0) > 0:
+                    expected = site.get("solar_capacity_kw", 0) * 4.5  # ~4.5 peak sun hours expected
+                    if expected > 0 and site["daily_solar_kwh"] < expected * 0.8:
+                        pct = site["daily_solar_kwh"] / expected * 100
+                        self.alerts.append({
+                            "tier": 2,
+                            "type": "SOLAR_UNDERPERFORMANCE",
+                            "source": "Solar Performance Monitor",
+                            "store_id": site["store_id"],
+                            "store_name": site.get("name", site["store_id"]),
+                            "message": (
+                                f"Solar underperformance: {site.get('name', site['store_id'])} — "
+                                f"generating {site['daily_solar_kwh']:.0f} kWh vs {expected:.0f} kWh expected "
+                                f"({pct:.0f}%). Check panels for faults."
+                            ),
+                            "action": "Schedule panel inspection",
+                            "timestamp": self.run_timestamp,
+                        })
+
+        # C6: Generator Inefficiency — consumption > 15% above baseline
+        efficiency = self.results.get("efficiency_analysis")
+        if efficiency is not None and len(efficiency) > 0:
+            critical_eff = efficiency[efficiency["status"] == "Critical"] if "status" in efficiency.columns else pd.DataFrame()
+            for _, row in critical_eff.iterrows():
+                self.alerts.append({
+                    "tier": 2,
+                    "type": "GENERATOR_INEFFICIENCY",
+                    "source": "Generator Efficiency Monitor",
+                    "store_id": row.get("store_id", ""),
+                    "message": (
+                        f"Generator inefficiency: {row.get('store_id', '')} — "
+                        f"consuming {abs(row.get('efficiency_score', 0)):.0f}% more diesel than expected. "
+                        f"Schedule maintenance check."
+                    ),
+                    "action": "Schedule generator maintenance",
+                    "timestamp": self.run_timestamp,
+                })
+
     # ── Output Methods ──
 
     def get_alerts(self, tier: Optional[int] = None) -> list:
@@ -248,10 +307,11 @@ class AlertEngine:
             f"  Info     (Tier 3): {counts['info']}",
             "",
             "DAILY OPERATING PLAN",
-            f"  Stores FULL:     {plan.get('stores_full', 'N/A')}",
-            f"  Stores REDUCED:  {plan.get('stores_reduced', 'N/A')}",
-            f"  Stores CRITICAL: {plan.get('stores_critical', 'N/A')}",
-            f"  Stores CLOSED:   {plan.get('stores_closed', 'N/A')}",
+            f"  Stores FULL:      {plan.get('stores_full', 'N/A')}",
+            f"  Stores SELECTIVE: {plan.get('stores_selective', 0)}",
+            f"  Stores REDUCED:   {plan.get('stores_reduced', 'N/A')}",
+            f"  Stores CRITICAL:  {plan.get('stores_critical', 'N/A')}",
+            f"  Stores CLOSED:    {plan.get('stores_closed', 'N/A')}",
             f"  Est. Daily Profit: {plan.get('total_estimated_profit', 0):,.0f} {CURRENCY}",
             "",
             "DIESEL PROCUREMENT",

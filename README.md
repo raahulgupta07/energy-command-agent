@@ -2,7 +2,7 @@
 
 AI-Powered Energy Control Tower for operational sustainability under Middle East energy disruption.
 
-**55 stores | 4 sectors | 9 AI models | 12 dashboards | Multi-agent AI**
+**55 stores | 4 sectors | 9 AI models | 12 dashboards | 25 agent tools | 15 KPIs | Scheduled automation**
 
 ---
 
@@ -279,6 +279,42 @@ server {
 1. Launch Ubuntu 22.04+ VM (minimum: 2 CPU, 4GB RAM)
 2. Open port 8510 in security group / firewall
 3. Follow Option A steps above
+
+---
+
+## Running the Scheduler
+
+The scheduler runs background jobs on a cadence (SENTINEL, ORACLE, COMMANDER).
+
+```bash
+# Run all scheduled jobs (foreground — keeps running)
+python scheduler.py
+
+# Run a single job immediately and exit
+python scheduler.py --run-once sentinel    # Check thresholds + email critical alerts
+python scheduler.py --run-once oracle      # Run prediction models
+python scheduler.py --run-once commander   # Generate daily plan + email briefing
+python scheduler.py --run-once midday      # Mid-day re-plan check
+python scheduler.py --run-once eod         # End-of-day reconciliation
+```
+
+### Schedule
+| Time | Job | What It Does |
+|------|-----|-------------|
+| Every 30 min | SENTINEL | Threshold monitoring, auto-email critical alerts |
+| 6:00 AM | ORACLE | Blackout forecast, price forecast, spoilage risk |
+| 7:00 AM | COMMANDER | Daily operating plan + email morning briefing |
+| 12:00 PM | Mid-day | Re-plan only if critical alerts detected |
+| 8:00 PM | Reminder | Email non-submitting sites |
+| 9:00 PM | EOD | Diesel stock reconciliation |
+
+### Running scheduler alongside Streamlit (Docker)
+```bash
+# Option 1: Run scheduler in background inside container
+docker exec -d energy-command-agent python scheduler.py
+
+# Option 2: Run as separate container (add to docker-compose.yml)
+```
 
 ---
 

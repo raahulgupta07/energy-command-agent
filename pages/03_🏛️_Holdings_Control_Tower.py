@@ -8,13 +8,14 @@ import streamlit_shadcn_ui as ui
 import plotly.graph_objects as go
 import pandas as pd
 from config.settings import SECTORS, CURRENCY
-from utils.data_loader import load_stores, load_daily_energy, load_store_sales, load_diesel_inventory
+from utils.data_loader import load_stores, load_daily_energy, load_store_sales, load_diesel_inventory, load_temperature_logs
 from utils.charts import COLORS
 from models.holdings_aggregator import HoldingsAggregator
 from utils.llm_client import is_llm_available
 from utils.element_captions import get_page_captions, render_caption
 from utils.page_intelligence import render_page_intelligence
 from utils.smart_table import render_smart_table
+from utils.database import get_override_stats, get_decision_audit, get_compliance_summary, get_quality_report
 
 st.set_page_config(page_title="Holdings Control Tower", page_icon="🏛️", layout="wide")
 
@@ -92,12 +93,41 @@ with cols2[1]:
                    description=f"{gk['solar_sites']} sites", key="h_solar")
     render_caption("solar_kwh", captions)
 
+# New KPI row: Adoption, Compliance, Cold Chain, Generator EBITDA
+cols3 = st.columns(4)
+with cols3[0]:
+    _adoption = get_override_stats()
+    ui.metric_card(title="AI Adoption Rate", content=f"{_adoption['adoption_rate_pct']:.0f}%",
+                   description=f"{_adoption['accepted']}/{_adoption['total']} accepted (target >80%)", key="h_adoption")
+with cols3[1]:
+    _compliance = get_compliance_summary()
+    ui.metric_card(title="Data Compliance", content=f"{_compliance['compliance_pct']:.0f}%",
+                   description=f"{_compliance['total_submissions']} submissions (target >95%)", key="h_compliance")
+with cols3[2]:
+    try:
+        from utils.kpi_calculator import cold_chain_uptime_pct
+        _temp = load_temperature_logs()
+        _uptime = cold_chain_uptime_pct(_temp)
+        _avg_uptime = _uptime["uptime_pct"].mean() if len(_uptime) > 0 else 0
+        ui.metric_card(title="Cold Chain Uptime", content=f"{_avg_uptime:.1f}%",
+                       description=f"{len(_uptime)} cold chain stores (target >99.5%)", key="h_coldchain")
+    except Exception:
+        ui.metric_card(title="Cold Chain Uptime", content="N/A", description="No temperature data", key="h_coldchain")
+with cols3[3]:
+    try:
+        from utils.kpi_calculator import generator_ebitda_contribution
+        _gen_ebitda = generator_ebitda_contribution(energy, sales, stores)
+        _loss_making = (_gen_ebitda["status"] == "Loss-making").sum()
+        ui.metric_card(title="Gen. Loss-Making", content=str(_loss_making),
+                       description=f"of {len(_gen_ebitda)} stores (target: 0)", key="h_gen_loss")
+    except Exception:
+        ui.metric_card(title="Gen. Loss-Making", content="N/A", description="calculating...", key="h_gen_loss")
+
 st.markdown("")
 
-# ── Sector Comparison ──
-st.markdown("### Sector Comparison")
-
-tab = ui.tabs(options=["Overview", "ERI Ranking", "Energy Mix"], default_value="Overview", key="holdings_tabs")
+# ── Tabs ──
+tab = ui.tabs(options=["Overview", "ERI Ranking", "Energy Mix", "AI Adoption", "Data Quality"],
+              default_value="Overview", key="holdings_tabs")
 
 if tab == "Overview":
     _sector_caption_ids = {"Retail": "sector_retail", "F&B": "sector_fnb", "Distribution": "sector_distribution", "Property": "sector_property"}
@@ -211,8 +241,121 @@ elif tab == "Energy Mix":
                        description=f"Avg {gk['avg_daily_blackout_hours']:.1f} hrs/day", key="h_bo")
         render_caption("total_bo", captions)
 
-# AI Insights merged into Page Intelligence at top
+elif tab == "AI Adoption":
+    st.markdown("### AI Recommendation Adoption Tracking")
+    st.markdown("""
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;margin-bottom:16px">
+        Tracks whether AI COMMANDER recommendations were followed by site managers. Target: <strong>>80% adoption rate</strong>.
+    </div>
+    """, unsafe_allow_html=True)
 
+    adoption = get_override_stats()
+    ac1, ac2, ac3, ac4 = st.columns(4)
+    with ac1:
+        ui.metric_card(title="Adoption Rate", content=f"{adoption['adoption_rate_pct']:.0f}%",
+                       description="target >80%", key="adopt_rate")
+    with ac2:
+        ui.metric_card(title="Total Decisions", content=str(adoption["total"]),
+                       description="tracked", key="adopt_total")
+    with ac3:
+        ui.metric_card(title="Accepted", content=str(adoption["accepted"]),
+                       description="AI followed", key="adopt_accepted")
+    with ac4:
+        ui.metric_card(title="Overridden", content=str(adoption["overridden"]),
+                       description="manager changed", key="adopt_overridden")
+
+    # Recent overrides
+    st.markdown("### Recent Override Decisions")
+    overrides = get_decision_audit(limit=30)
+    if overrides:
+        override_df = pd.DataFrame(overrides)
+        override_only = override_df[override_df["was_overridden"] == 1]
+        if len(override_only) > 0:
+            display = override_only[["store_name", "date", "ai_recommended_mode",
+                                      "final_mode", "decided_by", "override_reason", "sector"]].copy()
+            display.columns = ["Store", "Date", "AI Said", "Manager Changed To", "Decided By", "Reason", "Sector"]
+            render_smart_table(display, key="overrides_table", title="Override Log", max_height=300)
+        else:
+            st.success("No overrides yet — 100% AI adoption!")
+
+        # All decisions table
+        with st.expander("All Decisions (including confirmations)"):
+            all_display = override_df[["store_name", "date", "ai_recommended_mode",
+                                        "final_mode", "was_overridden", "decided_by", "created_at"]].copy()
+            all_display["was_overridden"] = all_display["was_overridden"].map({0: "Confirmed", 1: "OVERRIDE"})
+            all_display.columns = ["Store", "Date", "AI Mode", "Final Mode", "Status", "By", "Timestamp"]
+            render_smart_table(all_display, key="all_decisions_table", title="All Decisions",
+                               severity_col="Status", max_height=300)
+    else:
+        st.caption("No decisions tracked yet. Use the Override/Confirm tab on Store Decisions page.")
+
+    # Email report button
+    st.markdown("---")
+    if st.button("📧 Email Holdings Report", key="email_holdings", use_container_width=False):
+        from utils.email_alerts import is_email_enabled, send_email
+        from utils.report_generator import generate_weekly_ebitda_report
+        if is_email_enabled():
+            from config.settings import EMAIL_CONFIG
+            report = generate_weekly_ebitda_report(gk, sk, summary=None)
+            recipients = EMAIL_CONFIG["recipients"].get("holdings_gecc", []) + EMAIL_CONFIG["recipients"].get("cfo", [])
+            if recipients:
+                send_email(recipients, report["subject"], report["html"])
+                st.success(f"Report emailed to {len(recipients)} recipients")
+            else:
+                st.warning("No recipients configured in EMAIL_CONFIG")
+        else:
+            st.warning("Email not configured. Set EIS_SMTP_USER and EIS_SMTP_PASSWORD in .env")
+
+elif tab == "Data Quality":
+    st.markdown("### Data Submission Compliance")
+    st.markdown("""
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px">
+        Tracks daily data submissions from all sites. Target: <strong>>95% on-time compliance</strong>.
+        Sites below 90% are escalated to Sector leads.
+    </div>
+    """, unsafe_allow_html=True)
+
+    compliance = get_compliance_summary()
+    dc1, dc2, dc3, dc4 = st.columns(4)
+    with dc1:
+        ui.metric_card(title="Compliance", content=f"{compliance['compliance_pct']:.0f}%",
+                       description="target >95%", key="dq_compliance")
+    with dc2:
+        ui.metric_card(title="Total Submissions", content=str(compliance["total_submissions"]),
+                       description="recorded", key="dq_total")
+    with dc3:
+        ui.metric_card(title="Late Submissions", content=str(compliance["late_count"]),
+                       description="after 8 PM deadline", key="dq_late")
+    with dc4:
+        ui.metric_card(title="Stores Below 90%", content=str(compliance["stores_below_90"]),
+                       description="need escalation", key="dq_below90")
+
+    # Quality log
+    st.markdown("### Recent Quality Records")
+    quality_log = get_quality_report(limit=50)
+    if quality_log:
+        qdf = pd.DataFrame(quality_log)[["store_name", "date", "completeness_pct",
+                                          "is_late", "submitted_by", "created_at"]].copy()
+        qdf["is_late"] = qdf["is_late"].map({0: "ON TIME", 1: "LATE"})
+        qdf["completeness_pct"] = qdf["completeness_pct"].apply(lambda v: f"{v:.0f}%")
+        qdf.columns = ["Store", "Date", "Completeness", "Status", "Submitted By", "Recorded"]
+        render_smart_table(qdf, key="quality_table", title="Submission Log",
+                           severity_col="Status", max_height=300)
+    else:
+        st.caption("No quality records yet. Records are created when data is validated on upload or via scheduler.")
+
+    # Missing stores check
+    with st.expander("Check Missing Submissions for Today"):
+        from utils.data_quality import get_missing_stores
+        missing = get_missing_stores(stores, energy)
+        if missing:
+            st.warning(f"**{len(missing)} stores** have not submitted today's data:")
+            for m in missing[:20]:
+                st.write(f"- {m}")
+            if len(missing) > 20:
+                st.write(f"...and {len(missing) - 20} more")
+        else:
+            st.success("All stores have submitted for the latest date in the dataset.")
 
 # Generate element captions for next visit
 from utils.element_captions import generate_pending_captions

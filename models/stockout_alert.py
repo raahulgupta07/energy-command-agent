@@ -216,6 +216,63 @@ class StockoutAlert:
 
         return alerts
 
+    def score_suppliers(self, inventory_df: pd.DataFrame) -> pd.DataFrame:
+        """Score supplier reliability using delivery dates from diesel_inventory (simplified C2).
+
+        Uses: supplier_id, promised_delivery_date, actual_delivery_date columns.
+        Returns DataFrame with supplier_id, on_time_pct, avg_delay_days, risk_rating.
+        """
+        # Filter rows with supplier data
+        cols_needed = ["supplier_id", "promised_delivery_date", "actual_delivery_date"]
+        has_supplier_data = all(c in inventory_df.columns for c in cols_needed)
+
+        if not has_supplier_data:
+            return pd.DataFrame()
+
+        deliveries = inventory_df[
+            inventory_df["supplier_id"].notna() &
+            (inventory_df["supplier_id"] != "") &
+            inventory_df["promised_delivery_date"].notna() &
+            (inventory_df["promised_delivery_date"] != "") &
+            inventory_df["actual_delivery_date"].notna() &
+            (inventory_df["actual_delivery_date"] != "")
+        ].copy()
+
+        if len(deliveries) == 0:
+            return pd.DataFrame()
+
+        deliveries["promised_delivery_date"] = pd.to_datetime(deliveries["promised_delivery_date"], errors="coerce")
+        deliveries["actual_delivery_date"] = pd.to_datetime(deliveries["actual_delivery_date"], errors="coerce")
+        deliveries = deliveries.dropna(subset=["promised_delivery_date", "actual_delivery_date"])
+
+        if len(deliveries) == 0:
+            return pd.DataFrame()
+
+        deliveries["delay_days"] = (
+            deliveries["actual_delivery_date"] - deliveries["promised_delivery_date"]
+        ).dt.total_seconds() / 86400
+
+        deliveries["on_time"] = deliveries["delay_days"] <= 0.5  # Within half a day = on time
+
+        result = deliveries.groupby("supplier_id").agg(
+            total_deliveries=("on_time", "count"),
+            on_time_count=("on_time", "sum"),
+            avg_delay_days=("delay_days", "mean"),
+            max_delay_days=("delay_days", "max"),
+        ).reset_index()
+
+        result["on_time_pct"] = (result["on_time_count"] / result["total_deliveries"] * 100).round(1)
+
+        # Risk rating based on on-time %
+        result["reliability_rating"] = result["on_time_pct"].apply(
+            lambda x: "A" if x >= 95 else ("B" if x >= 85 else ("C" if x >= 70 else "D"))
+        )
+        result["risk_level"] = result["on_time_pct"].apply(
+            lambda x: "LOW" if x >= 95 else ("MEDIUM" if x >= 85 else ("HIGH" if x >= 70 else "CRITICAL"))
+        )
+
+        return result.sort_values("on_time_pct", ascending=False)
+
     def get_summary(self) -> dict:
         """Network-wide inventory summary."""
         if self.analysis is None:
